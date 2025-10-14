@@ -1,0 +1,72 @@
+:root{
+  --red:#e53935;         /* rojo del logo */
+  --black:#111214;       /* negro profundo */
+  --ink:#22252a;         /* texto */
+  --bg:#0c0d0f;          /* fondo oscuro */
+  --card:#16181d;        /* cards */
+  --muted:#9aa3af;
+  --white:#fff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--white);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+img{max-width:100%;display:block}
+.container{width:min(1100px,92%);margin-inline:auto}
+.hidden{display:none !important}
+
+header{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+.brand{display:flex;gap:14px;align-items:center}
+.brand img{width:70px;height:70px;object-fit:contain}
+.brand h1{margin:0;font-size:1.6rem;letter-spacing:.4px}
+.brand p{margin:2px 0 0;color:var(--muted)}
+
+.actions{display:flex;gap:10px}
+.btn{background:var(--red);border:0;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn:hover{opacity:.9}
+.btn.ghost{background:transparent;border:1px solid #333}
+.btn.primary{box-shadow:0 8px 22px rgba(229,57,53,.25)}
+
+.hero{padding:20px 0 10px;border-top:1px solid #1e2026;border-bottom:1px solid #1e2026;background:linear-gradient(180deg,#121419,transparent)}
+.hero h2{text-align:center;margin:6px 0 14px;font-size:1.4rem}
+.filters{display:grid;grid-template-columns:1fr 130px 160px auto auto;gap:10px;width:min(900px,100%);margin:0 auto 10px}
+.filters input,.filters select{background:#13161b;border:1px solid #222631;color:#e5e7eb;padding:10px;border-radius:10px}
+.filters input::placeholder{color:#6b7280}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:26px 0}
+@media (max-width:980px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){
+  .filters{grid-template-columns:1fr 1fr;grid-auto-rows:min-content}
+  .grid{grid-template-columns:1fr}
+  .actions{gap:6px}
+}
+
+.card{background:var(--card);border:1px solid #1b1e24;border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.thumb{aspect-ratio:16/9;background:#0f1115;display:grid;place-items:center}
+.card-body{padding:14px 14px 12px}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#1f2229;border:1px solid #2a2e36;color:#cbd5e1;padding:6px 10px;border-radius:999px;font-size:.82rem;margin-right:8px}
+.title{font-weight:800;margin:6px 0 4px;font-size:1.05rem}
+.meta{color:#cbd5e1;font-size:.9rem}
+.price{font-size:1.25rem;font-weight:900;color:#fff;margin-top:6px}
+.card-actions{display:flex;gap:8px;padding:0 14px 14px}
+.cta{flex:1;display:inline-flex;justify-content:center;align-items:center;border-radius:10px;padding:10px 12px;border:1px solid #2f333c;background:#14171c;color:#fff;text-decoration:none;font-weight:700}
+.cta.primary{background:var(--red);border-color:transparent}
+
+.empty{text-align:center;color:var(--muted);padding:50px 0}
+.loader{text-align:center;color:#cbd5e1;padding:16px}
+
+footer{border-top:1px solid #1e2026;margin-top:20px}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;padding:16px 0}
+.contacts{list-style:none;padding:0;margin:8px 0 0;display:flex;gap:14px}
+.contacts a{color:#fff;text-decoration:none;border-bottom:1px dashed #3a3f48}
+.contacts a:hover{color:#f9fafb}
+
+dialog{border:0;border-radius:16px;width:min(800px,92%);background:#0f1217;color:#fff}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 14px 0}
+.icon{background:transparent;border:0;color:#fff;font-size:1.1rem;cursor:pointer}
+#carForm{padding:6px 14px 14px}
+.grid.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid.two label{display:flex;flex-direction:column;gap:6px}
+label input,label textarea{background:#12161d;border:1px solid #232834;color:#e5e7eb;padding:10px;border-radius:10px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.muted{color:var(--muted)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#101317;border:1px solid #2a2e36;color:#fff;padding:10px 14px;border-radius:10px}
