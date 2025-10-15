@@ -12,7 +12,7 @@ export function Pagination({ page, totalPages }: PaginationProps) {
   const params = useSearchParams();
 
   const goTo = (newPage: number) => {
-    const search = new URLSearchParams(params);
+    const search = new URLSearchParams(params.toString());
     if (newPage <= 1) {
       search.delete("page");
     } else {

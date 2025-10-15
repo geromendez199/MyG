@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import useSWR from "swr";
 import { ImageUploader } from "./image-uploader";
 
@@ -255,7 +256,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {form.images.map((image) => (
               <li key={image} className="group relative overflow-hidden rounded-lg border border-slate-200">
-                <img src={image} alt="Imagen" className="h-28 w-full object-cover" />
+                <Image src={image} alt="Imagen" width={200} height={112} className="h-28 w-full object-cover" />
                 <button
                   type="button"
                   className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100"
