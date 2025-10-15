@@ -53,26 +53,34 @@ export async function GET(request: Request) {
   const skip = (filters.page - 1) * filters.perPage;
   const take = filters.perPage;
 
-  const [items, total] = await Promise.all([
-    db.vehicle.findMany({
-      where,
-      include: { seller: true },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take,
-    }),
-    db.vehicle.count({ where }),
-  ]);
+  try {
+    const [items, total] = await Promise.all([
+      db.vehicle.findMany({
+        where,
+        include: { seller: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      db.vehicle.count({ where }),
+    ]);
 
-  return NextResponse.json({
-    items,
-    pagination: {
-      page: filters.page,
-      perPage: filters.perPage,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / filters.perPage)),
-    },
-  });
+    return NextResponse.json({
+      items,
+      pagination: {
+        page: filters.page,
+        perPage: filters.perPage,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / filters.perPage)),
+      },
+    });
+  } catch (error) {
+    console.error("Failed to fetch vehicles", error);
+    return NextResponse.json(
+      { error: "Error interno al obtener los vehículos" },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -88,33 +96,42 @@ export async function POST(request: Request) {
   }
 
   const data = parsed.data;
-  const baseSlug = slugify(data.brand, data.model, data.year);
-  let slug = baseSlug;
-  let counter = 1;
 
-  while (await db.vehicle.findUnique({ where: { slug } })) {
-    slug = `${baseSlug}-${counter++}`;
+  try {
+    const baseSlug = slugify(data.brand, data.model, data.year);
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (await db.vehicle.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${counter++}`;
+    }
+
+    const created = await db.vehicle.create({
+      data: {
+        slug,
+        title: data.title,
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        priceARS: data.priceARS || null,
+        km: data.km || null,
+        fuel: data.fuel || null,
+        gearbox: data.gearbox || null,
+        location: data.location || null,
+        description: data.description || null,
+        images: data.images,
+        sellerId: data.sellerId,
+        published: data.published,
+      },
+      include: { seller: true },
+    });
+
+    return NextResponse.json(created, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create vehicle", error);
+    return NextResponse.json(
+      { error: "Error interno al crear el vehículo" },
+      { status: 500 },
+    );
   }
-
-  const created = await db.vehicle.create({
-    data: {
-      slug,
-      title: data.title,
-      brand: data.brand,
-      model: data.model,
-      year: data.year,
-      priceARS: data.priceARS || null,
-      km: data.km || null,
-      fuel: data.fuel || null,
-      gearbox: data.gearbox || null,
-      location: data.location || null,
-      description: data.description || null,
-      images: data.images,
-      sellerId: data.sellerId,
-      published: data.published,
-    },
-    include: { seller: true },
-  });
-
-  return NextResponse.json(created, { status: 201 });
 }

@@ -2,32 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ① Variables con valores por defecto (RGB con espacios) */
 :root {
-  --primary: 255 26 26;   /* #ff1a1a */
+  --primary: 255 26 26; /* #ff1a1a */
   --secondary: 255 255 255; /* #ffffff */
 }
 
-/* ② (Opcional) modo oscuro si querés cambiar algo
-@media (prefers-color-scheme: dark) {
-  :root {
-    --secondary: 255 255 255;
+@layer base {
+  body {
+    @apply min-h-screen bg-slate-100 text-slate-900 antialiased;
+  }
+
+  a {
+    @apply text-inherit;
   }
 }
-*/
 
-/* ③ Utilidades de botones, usando los colores definidos arriba */
 @layer components {
   .btn-primary {
-      @apply inline-flex items-center justify-center rounded-md bg-primary px-4 py-2
-        text-sm font-semibold text-white shadow transition
-        hover:bg-primary/80
-        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
   }
+
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-md border border-primary/20
-      bg-white px-4 py-2 text-sm font-semibold text-primary
-      hover:bg-primary/10
-      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary/40 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
   }
 }
