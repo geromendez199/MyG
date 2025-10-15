@@ -16,6 +16,10 @@ interface PageProps {
   params: { slug: string };
 }
 
+type VehicleWithSeller = Prisma.VehicleGetPayload<{
+  include: { seller: true };
+}>;
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const result = await fetchVehicleBySlug(params.slug).catch((error) => {
     console.error("Failed to load vehicle metadata", error);
