@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: `Panel | ${siteName}`,
 };
 
+export default function AdminPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 py-12">
       <header className="space-y-3 text-center">

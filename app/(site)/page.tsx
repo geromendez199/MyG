@@ -1,3 +1,4 @@
+import React from "react";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { vehicleFiltersSchema } from "@/lib/validators";
@@ -94,7 +95,9 @@ async function VehiclesSection({
           <VehicleCard key={vehicle.id} vehicle={vehicle} />
         ))}
       </div>
-      <Pagination page={page} totalPages={totalPages} />
+      <React.Suspense fallback={<div className="flex justify-center py-8"><span>Cargando paginación...</span></div>}>
+        <Pagination page={page} totalPages={totalPages} />
+      </React.Suspense>
     </div>
   );
 }
@@ -108,7 +111,9 @@ export default function SitePage({
     <div className="space-y-16 pb-24">
       <Hero />
       <section className="space-y-6">
-        <Filters />
+        <React.Suspense fallback={<div className="flex justify-center py-8"><span>Cargando filtros...</span></div>}>
+          <Filters />
+        </React.Suspense>
         <VehiclesSection searchParams={searchParams} />
       </section>
       <section className="rounded-3xl bg-white p-10 shadow-sm">
