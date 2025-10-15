@@ -12,7 +12,20 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 // export const fetchCache = "force-no-store"; // opcional
 
-async function getVehicles(searchParams: Record<string, string | string[] | undefined>) {
+type VehicleWithSeller = Prisma.VehicleGetPayload<{
+  include: { seller: true };
+}>;
+
+interface VehiclesResult {
+  items: VehicleWithSeller[];
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+  hasError: boolean;
+}
+
+async function getVehicles(searchParams: Record<string, string | string[] | undefined>): Promise<VehiclesResult> {
   const normalized = Object.fromEntries(
     Object.entries(searchParams).map(([key, value]) => [
       key,
@@ -50,24 +63,37 @@ async function getVehicles(searchParams: Record<string, string | string[] | unde
   const skip = (filters.page - 1) * filters.perPage;
   const take = filters.perPage;
 
-  const [items, total] = await Promise.all([
-    db.vehicle.findMany({
-      where,
-      include: { seller: true },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take,
-    }),
-    db.vehicle.count({ where }),
-  ]);
+  try {
+    const [items, total] = await Promise.all([
+      db.vehicle.findMany({
+        where,
+        include: { seller: true },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      db.vehicle.count({ where }),
+    ]);
 
-  return {
-    items,
-    page: filters.page,
-    perPage: filters.perPage,
-    total,
-    totalPages: Math.max(1, Math.ceil(total / filters.perPage)),
-  };
+    return {
+      items,
+      page: filters.page,
+      perPage: filters.perPage,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / filters.perPage)),
+      hasError: false,
+    };
+  } catch (error) {
+    console.error("Failed to load vehicles from the database", error);
+    return {
+      items: [],
+      page: filters.page,
+      perPage: filters.perPage,
+      total: 0,
+      totalPages: 1,
+      hasError: true,
+    };
+  }
 }
 
 async function VehiclesSection({
@@ -75,7 +101,16 @@ async function VehiclesSection({
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
-  const { items, page, totalPages } = await getVehicles(searchParams);
+  const { items, page, totalPages, hasError } = await getVehicles(searchParams);
+
+  if (hasError) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-12 text-center text-red-700">
+        No pudimos conectarnos a la base de datos. Revisá la configuración de la variable{' '}
+        <code>DATABASE_URL</code> y volvé a intentarlo.
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (

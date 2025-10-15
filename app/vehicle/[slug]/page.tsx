@@ -7,6 +7,7 @@ export const revalidate = 0;
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { formatCurrency, formatKm } from "@/lib/format";
 import { waHref } from "@/lib/whatsapp";
@@ -16,39 +17,69 @@ interface PageProps {
   params: { slug: string };
 }
 
+type VehicleWithSeller = Prisma.VehicleGetPayload<{
+  include: { seller: true };
+}>;
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const vehicle = await db.vehicle.findUnique({
-    where: { slug: params.slug },
-    include: { seller: true },
-  });
+  try {
+    const vehicle = await db.vehicle.findUnique({
+      where: { slug: params.slug },
+      include: { seller: true },
+    });
 
-  if (!vehicle) {
-    return { title: "Vehículo no encontrado" };
-  }
+    if (!vehicle) {
+      return { title: "Vehículo no encontrado" };
+    }
 
-  const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
-  const description = vehicle.description || config.seo.description;
-  const image = vehicle.images[0];
+    const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
+    const description = vehicle.description || config.seo.description;
+    const image = vehicle.images[0];
 
-  return {
-    title,
-    description,
-    openGraph: {
+    return {
       title,
       description,
-      images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
-    },
-  };
+      openGraph: {
+        title,
+        description,
+        images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to load vehicle metadata", error);
+    return { title: "Vehículo no disponible" };
+  }
 }
 
 // ...resto del archivo sin cambios
 
 
 export default async function VehicleDetailPage({ params }: PageProps) {
-  const vehicle = await db.vehicle.findUnique({
-    where: { slug: params.slug },
-    include: { seller: true },
-  });
+  let vehicle: VehicleWithSeller | null = null;
+  let hasError = false;
+
+  try {
+    vehicle = await db.vehicle.findUnique({
+      where: { slug: params.slug },
+      include: { seller: true },
+    });
+  } catch (error) {
+    console.error("Failed to load vehicle detail", error);
+    hasError = true;
+  }
+
+  if (hasError) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-12 py-12">
+        <a href="/" className="text-sm text-slate-600">
+          ← Volver al listado
+        </a>
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-10 text-red-700">
+          No pudimos cargar la información del vehículo. Revisá la conexión a la base de datos e intentá nuevamente.
+        </div>
+      </div>
+    );
+  }
 
   if (!vehicle) {
     notFound();
