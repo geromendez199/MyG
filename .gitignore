@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.local
+.env.*.local
+pnpm-lock.yaml
+/dist
+.DS_Store
+*.log
+prisma/generated
+.supabase
+.vercel

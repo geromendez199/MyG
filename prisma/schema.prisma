@@ -1,0 +1,40 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Seller {
+  id        String   @id @default(cuid())
+  name      String
+  phoneE164 String   @unique
+  waPreset  String?
+  vehicles  Vehicle[]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vehicle {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  slug        String   @unique
+  title       String
+  brand       String
+  model       String
+  year        Int
+  priceARS    Int?
+  km          Int?
+  fuel        String?
+  gearbox     String?
+  location    String?
+  description String?
+  images      String[]
+  sellerId    String
+  seller      Seller   @relation(fields: [sellerId], references: [id])
+  published   Boolean  @default(true)
+}
