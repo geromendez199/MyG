@@ -1,338 +1,131 @@
-# OnePage Vehículos — README
+# MG Automotores — One Page de vehículos
 
-Una **One-Page** para publicar vehículos y que los visitantes vean la ficha y contacten al vendedor directamente por **WhatsApp** (click‑to‑chat).
+Landing responsive con catálogo de vehículos usados, filtros básicos, detalle por unidad y panel de administración protegido por token. Construido con **Next.js 14**, **TypeScript**, **TailwindCSS**, **Prisma** y **Supabase** (PostgreSQL + Storage).
 
-> **Stack elegido**
->
-> * **Next.js 14 (App Router)** + **React** + **TypeScript**
-> * **TailwindCSS** para estilos
-> * **PostgreSQL en Supabase** (gratis/low‑cost) + **Prisma** ORM
-> * **Vercel** para deploy
-> * **Supabase Storage** para imágenes
->
-> Motivos: setup simple, free tier generoso, DX rápida y costo casi cero.
+## 🚗 Características
 
----
+- Landing "one-page" con hero, filtros y grilla de cards.
+- Cards con precio, datos clave, vendedor y CTA **Hablar por WhatsApp** (formato E.164 + mensaje sugerido).
+- Filtros por búsqueda libre, marca, año mínimo/máximo y rango de precio.
+- Paginación simple (querystring `page`).
+- Página de detalle por `slug` con metadatos SEO/OG.
+- Panel de alta/edición protegido por `ADMIN_TOKEN`, con subida de imágenes a Supabase Storage.
+- API REST (`/api/vehicles`, `/api/vehicles/[id]`, `/api/uploads`, `/api/admin/*`).
+- Seed inicial con vendedores y un vehículo de ejemplo.
+- Theming dinámico desde variables de entorno (`NEXT_PUBLIC_PRIMARY`, `NEXT_PUBLIC_SECONDARY`).
 
-## 1) Features
-
-* Landing de una sola página con listado de vehículos.
-* Card por vehículo: fotos, marca/modelo/año, precio, km, ubicación, combustible, caja, descripción.
-* Filtro/orden simple (marca, precio, año, km).
-* CTA **“Hablar por WhatsApp”** por vehículo (vendedor específico).
-* Panel mínimo de carga (ruta protegida vía token) para crear/editar vehículos.
-* Upload de imágenes a Supabase Storage.
-* SEO básico (title/description por vehículo, OpenGraph para compartir).
-* Paleta de colores tomada del logo vía CSS variables.
-
----
-
-## 2) Estructura
+## 🗂️ Estructura principal
 
 ```
-onepage-autos/
-├─ app/
-│  ├─ (site)/page.tsx               # Listado principal
-│  ├─ api/vehicles/route.ts         # GET/POST (lista y crear)
-│  ├─ admin/route.ts                # Protección auth mínima (edge)
-│  ├─ admin/page.tsx                # Form de alta/edición
-│  └─ vehicle/[slug]/page.tsx       # Detalle SEO shareable (opcional)
-├─ components/                      # UI (Cards, Filters, Uploader)
-├─ lib/
-│  ├─ db.ts                         # Prisma Client
-│  ├─ whatsapp.ts                   # Helpers de WhatsApp
-│  └─ config.ts                     # Colors del logo, etc.
-├─ prisma/
-│  └─ schema.prisma
-├─ public/                          # Íconos, fallback images, logo
-├─ styles/globals.css
-├─ .env.local
-├─ package.json
-└─ README.md
+app/
+├─ (site)/page.tsx           # Landing pública
+├─ admin/
+│  ├─ page.tsx               # Panel de gestión (token gate)
+│  └─ route.ts               # Protección mínima (HEAD + token)
+├─ api/
+│  ├─ vehicles/route.ts      # GET/POST con filtros
+│  ├─ vehicles/[id]/route.ts # GET/PATCH
+│  ├─ admin/session/route.ts # Verificación de token
+│  ├─ admin/sellers/route.ts # Listado de vendedores (protegido)
+│  └─ uploads/route.ts       # Upload a Supabase Storage
+└─ vehicle/[slug]/page.tsx   # Detalle SEO por unidad
+components/
+├─ hero.tsx, filters.tsx, vehicle-card.tsx, pagination.tsx
+└─ admin/*                   # Dashboard, formularios, uploader
+lib/
+├─ config.ts, db.ts, slug.ts, whatsapp.ts, format.ts, supabase.ts, validators.ts
+prisma/schema.prisma         # Modelos Seller y Vehicle
+scripts/seed.ts              # Semilla inicial
+styles/globals.css           # Tailwind + theming
 ```
 
----
+## ⚙️ Variables de entorno
 
-## 3) Modelo de datos (Prisma)
-
-```prisma
-// prisma/schema.prisma
- datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
- }
-
- generator client {
-  provider = "prisma-client-js"
- }
-
- model Seller {
-  id        String  @id @default(cuid())
-  name      String
-  phoneE164 String  // +54911XXXXXXXX
-  waPreset  String? // mensaje prellenado opcional
-  vehicles  Vehicle[]
-  active    Boolean @default(true)
- }
-
- model Vehicle {
-  id          String   @id @default(cuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  slug        String   @unique
-  title       String   // "Ford Fiesta 1.6 SE"
-  brand       String
-  model       String
-  year        Int
-  priceARS    Int?
-  km          Int?
-  fuel        String?  // nafta, diesel, híbrido, eléctrico
-  gearbox     String?  // manual, automática
-  location    String?
-  description String?
-  images      String[] // URLs de Supabase Storage
-  sellerId    String
-  seller      Seller   @relation(fields: [sellerId], references: [id])
-  published   Boolean  @default(true)
- }
-```
-
-### Semilla rápida (opcional)
-
-```ts
-// scripts/seed.ts
-import { PrismaClient } from "@prisma/client";
-const db = new PrismaClient();
-
-async function main() {
-  const martin = await db.seller.upsert({
-    where: { phoneE164: process.env.SELLER_MARTIN_PHONE! },
-    update: {},
-    create: {
-      name: "Martin",
-      phoneE164: process.env.SELLER_MARTIN_PHONE!,
-      waPreset: "Hola! Vi el auto publicado y quiero más info.",
-    },
-  });
-  const owner = await db.seller.upsert({
-    where: { phoneE164: process.env.SELLER_OWNER_PHONE! },
-    update: {},
-    create: {
-      name: process.env.SELLER_OWNER_NAME ?? "Vendedor",
-      phoneE164: process.env.SELLER_OWNER_PHONE!,
-    },
-  });
-
-  await db.vehicle.create({
-    data: {
-      slug: "fiesta-16-se-2017",
-      title: "Ford Fiesta 1.6 SE 2017",
-      brand: "Ford",
-      model: "Fiesta",
-      year: 2017,
-      priceARS: 9500000,
-      km: 82000,
-      fuel: "nafta",
-      gearbox: "manual",
-      location: "Córdoba",
-      images: [],
-      sellerId: martin.id,
-    },
-  });
-}
-
-main().finally(() => db.$disconnect());
-```
-
----
-
-## 4) WhatsApp click‑to‑chat
-
-Formato oficial:
-
-```
-https://wa.me/<E164>?text=<URLEncoded>
-```
-
-* **<E164>**: número con prefijo país sin "+" ni ceros. Ej: **5493511234567** (AR +54, móvil con 9).
-* Mensaje sugerido por vehículo:
-
-```ts
-const makeWAUrl = (phoneE164: string, v: Vehicle) => {
-  const base = `https://wa.me/${phoneE164.replace("+", "")}`;
-  const msg = encodeURIComponent(
-    `Hola! Me interesa el ${v.title} (${v.year}). ¿Sigue disponible?`
-  );
-  return `${base}?text=${msg}`;
-};
-```
-
-> **Tip**: guardar `waPreset` en `Seller` para personalizar saludo.
-
----
-
-## 5) Variables de entorno (.env.local)
+Crear `.env.local` a partir de `.env.example` y completar:
 
 ```env
-# Database (Supabase)
-DATABASE_URL=postgresql://postgres:password@db.xxxxx.supabase.co:5432/postgres
-
-# Supabase Storage (opcional si usas el SDK del proyecto)
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1...
-SUPABASE_SERVICE_ROLE=...
+DATABASE_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE=
 SUPABASE_BUCKET=vehicles
-
-# Admin
-ADMIN_TOKEN=poneme-un-token-largo
-
-# Vendedores
-SELLER_MARTIN_PHONE=+5493511111111
-SELLER_OWNER_NAME=Gero
-SELLER_OWNER_PHONE=+5493512222222
-
-# Theming a partir del logo
-NEXT_PUBLIC_PRIMARY=#123456
-NEXT_PUBLIC_SECONDARY=#ABCDEF
+ADMIN_TOKEN=
+SELLER_MARTIN_PHONE=
+SELLER_OWNER_NAME=
+SELLER_OWNER_PHONE=
+NEXT_PUBLIC_PRIMARY=
+NEXT_PUBLIC_SECONDARY=
+NEXT_PUBLIC_SITE_URL=
 ```
 
----
+> **Nota:** El `SUPABASE_SERVICE_ROLE` solo se usa en el backend (rutas protegidas) para subir imágenes. No exponerlo en el cliente.
 
-## 6) API mínima (App Router)
+## 🛠️ Scripts
 
-### `GET /api/vehicles`
+| Comando | Descripción |
+| --- | --- |
+| `pnpm dev` | Ejecuta el modo desarrollo (Next.js). |
+| `pnpm build` | Build de producción. |
+| `pnpm start` | Arranca el servidor en modo producción. |
+| `pnpm lint` | Linting con ESLint. |
+| `pnpm prisma:generate` | Genera el cliente Prisma. |
+| `pnpm prisma:migrate` | Ejecuta `prisma migrate dev`. |
+| `pnpm seed` | Corre `scripts/seed.ts` con `tsx`. |
 
-* Query: `q`, `brand`, `yearMin`, `yearMax`, `priceMin`, `priceMax`.
-* Respuesta: JSON con lista paginada.
+## 🚀 Setup local
 
-### `POST /api/vehicles`
+1. Instalar dependencias:
+   ```bash
+   pnpm i
+   ```
+2. Copiar variables de entorno:
+   ```bash
+   cp .env.example .env.local
+   # Completar valores (DB, Supabase, tokens, colores)
+   ```
+3. Preparar Prisma:
+   ```bash
+   pnpm prisma:generate
+   pnpm prisma:migrate
+   ```
+4. Ejecutar semilla inicial (opcional recomendado):
+   ```bash
+   pnpm seed
+   ```
+5. Correr el servidor de desarrollo:
+   ```bash
+   pnpm dev
+   ```
 
-* Header: `Authorization: Bearer ${ADMIN_TOKEN}`
-* Body:
+La app queda disponible en `http://localhost:3000`.
 
-```json
-{
-  "title": "Ford Fiesta 1.6 SE 2017",
-  "brand": "Ford",
-  "model": "Fiesta",
-  "year": 2017,
-  "priceARS": 9500000,
-  "km": 82000,
-  "fuel": "nafta",
-  "gearbox": "manual",
-  "location": "Córdoba",
-  "images": ["https://..."],
-  "sellerId": "<id>"
-}
-```
+## 🗄️ Base de datos y Storage
 
----
+- **Supabase (PostgreSQL):** crear proyecto, copiar el `DATABASE_URL` y configurarlo en `.env.local`.
+- **Migrations:** usar `pnpm prisma:migrate` en desarrollo. Para producción, ejecutar `prisma migrate deploy` (Vercel → comando custom o `pnpm prisma migrate deploy`).
+- **Storage:** crear bucket `vehicles` con lectura pública. El upload se realiza desde `/api/uploads` usando el `SUPABASE_SERVICE_ROLE` en el backend.
 
-## 7) UI/UX
+## 🔐 Seguridad mínima
 
-* **Hero** con claim + filtro rápido.
-* **Grid de cards** con CTA WhatsApp por ítem.
-* **Badge** de año/kms, **precio** destacado, **ubicación**.
-* **Tema**: leer `NEXT_PUBLIC_PRIMARY/SECONDARY` y aplicarlo como `--color-primary` en Tailwind.
-* **Responsive** (mobile‑first), imágenes con `next/image`.
+- Las rutas mutables (`POST /api/vehicles`, `PATCH /api/vehicles/[id]`, `/api/uploads`, `/api/admin/*`) exigen encabezado `Authorization: Bearer ADMIN_TOKEN`.
+- El panel (`/admin`) solicita token y lo guarda en `localStorage` del navegador.
+- No se exponen secretos del lado cliente.
 
----
+## 🧪 QA / Checklist
 
-## 8) Setup & Scripts
+- [x] Cards con CTA de WhatsApp (`waHref`).
+- [x] Filtros funcionales con querystring.
+- [x] Upload de imágenes a Supabase Storage.
+- [x] Slug automático `kebab-case` (`brand-model-year`).
+- [x] SEO básico + OG en landing y detalle.
+- [x] Panel protegido con token.
 
-```bash
-# 1) Clonar e instalar
-pnpm i
+## ☁️ Deploy en Vercel
 
-# 2) Variables
-cp .env.example .env.local  # crea y completa
+1. Crear proyecto nuevo en Vercel y conectar el repositorio.
+2. Configurar las variables de entorno (mismas que `.env.local`).
+3. Configurar Supabase (DB + Storage) accesible desde Vercel.
+4. Opcional: agregar script `pnpm prisma migrate deploy` en “Build & Development Settings → Post-install Command”.
+5. Deploy automático en cada push a la rama principal.
 
-# 3) Prisma
-pnpm prisma generate
-pnpm prisma migrate dev
-pnpm tsx scripts/seed.ts    # opcional
-
-# 4) Dev server
-pnpm dev
-```
-
-### Deploy
-
-* **DB**: crear proyecto en **Supabase**, volcar `DATABASE_URL`.
-* **Storage**: bucket `vehicles` con política pública de lectura.
-* **Web**: conectar repo a **Vercel** y setear las envs.
-
----
-
-## 9) Seguridad mínima
-
-* Alta/edición solo con `ADMIN_TOKEN` (Bearer).
-* Sanitizar uploads y limitar tamaño/formatos.
-* Evitar datos sensibles en el cliente (no exponer Service Role de Supabase).
-
----
-
-## 10) Endpoints/Helpers de WhatsApp
-
-```ts
-// lib/whatsapp.ts
-export const toE164 = (raw: string) => raw.replace(/\D/g, "");
-export const waHref = (phoneE164: string, text?: string) =>
-  `https://wa.me/${toE164(phoneE164)}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
-```
-
-Uso en la Card:
-
-```tsx
-<Link href={waHref(seller.phoneE164, `Hola! Me interesa el ${v.title}.`) }>
-  Hablar por WhatsApp
-</Link>
-```
-
----
-
-## 11) Form de carga (admin)
-
-Campos: `title, brand, model, year, priceARS, km, fuel, gearbox, location, seller, images[]`.
-
-* Imágenes: drag&drop → sube a Supabase Storage → guarda URLs.
-* Slug automático `kebabCase(brand, model, year)`.
-
----
-
-## 12) Paleta desde el logo
-
-Pegar colores en `.env` o editar `styles/globals.css`:
-
-```css
-:root{ --color-primary: var(--tw-color-[NEXT_PUBLIC_PRIMARY]); }
-```
-
-O directamente Tailwind config usando `NEXT_PUBLIC_PRIMARY`.
-
----
-
-## 13) Roadmap corto
-
-* Favoritos en localStorage.
-* Paginación infinita.
-* Exportar a CSV.
-* Feed RSS/JSON para portales.
-* Microcopys para WhatsApp por vehículo.
-
----
-
-## 14) QA Checklist
-
-* [ ] WhatsApp abre con número correcto y mensaje prellenado.
-* [ ] Imágenes cargan desde Storage en mobile/desktop.
-* [ ] Filtros funcionan y persisten en querystring.
-* [ ] SEO: título por página/vehículo, OG tags.
-* [ ] Admin requiere `ADMIN_TOKEN`.
-
----
-
-## 15) Notas
-
-* Si el proyecto requiere **costo cero absoluto**, se puede cambiar a **SQLite** en `Vercel KV + Turso** o **Neon Free**; este README asume Supabase por simplicidad.
-* Los teléfonos deben ir en formato **E.164** con prefijo país (Argentina: `+54` y para móviles `+549`).
+¡Listo! El sitio queda listo para publicar inventario de vehículos y gestionarlo con un panel simple.
