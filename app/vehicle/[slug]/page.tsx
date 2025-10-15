@@ -2,16 +2,16 @@ import "server-only";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-// export const fetchCache = "force-no-store";
 
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
+
+import { config } from "@/lib/config";
 import { db } from "@/lib/db";
 import { formatCurrency, formatKm } from "@/lib/format";
 import { waHref } from "@/lib/whatsapp";
-import { config } from "@/lib/config";
 
 interface PageProps {
   params: { slug: string };
@@ -51,9 +51,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-// ...resto del archivo sin cambios
-
-
 export default async function VehicleDetailPage({ params }: PageProps) {
   let vehicle: VehicleWithSeller | null = null;
   let hasError = false;
@@ -70,11 +67,11 @@ export default async function VehicleDetailPage({ params }: PageProps) {
 
   if (hasError) {
     return (
-      <div className="mx-auto max-w-5xl space-y-12 py-12">
+      <div className="mx-auto max-w-5xl space-y-12 px-4 py-12">
         <a href="/" className="text-sm text-slate-600">
           ← Volver al listado
         </a>
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-10 text-red-700">
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-10 text-red-700 shadow-sm">
           No pudimos cargar la información del vehículo. Revisá la conexión a la base de datos e intentá nuevamente.
         </div>
       </div>
@@ -89,24 +86,26 @@ export default async function VehicleDetailPage({ params }: PageProps) {
   const message = `Hola! Me interesa el ${vehicle.title} (${vehicle.year}). ¿Sigue disponible?`;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-12 py-12">
-      <a href="/" className="text-sm text-slate-600">← Volver al listado</a>
-      <article className="rounded-3xl bg-white shadow-sm">
+    <div className="mx-auto max-w-5xl space-y-12 px-4 py-12">
+      <a href="/" className="text-sm text-slate-600">
+        ← Volver al listado
+      </a>
+      <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         {cover && (
-          <div className="relative h-96 w-full overflow-hidden rounded-t-3xl">
-            <Image src={cover} alt={vehicle.title} fill className="object-cover" />
+          <div className="relative h-96 w-full overflow-hidden">
+            <Image src={cover} alt={vehicle.title} fill className="object-cover" priority />
           </div>
         )}
         <div className="grid gap-10 p-8 md:grid-cols-[2fr_1fr]">
           <section className="space-y-6">
-            <header className="space-y-2">
+            <header className="space-y-3">
               <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 {vehicle.brand}
               </span>
               <h1 className="text-3xl font-bold text-slate-900">{vehicle.title}</h1>
               <p className="text-lg font-semibold text-primary">{formatCurrency(vehicle.priceARS)}</p>
             </header>
-            <dl className="grid grid-cols-2 gap-4 text-sm text-slate-600">
+            <dl className="grid gap-4 text-sm text-slate-600 sm:grid-cols-2">
               <div>
                 <dt className="font-semibold text-slate-500">Año</dt>
                 <dd>{vehicle.year}</dd>
