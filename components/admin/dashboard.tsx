@@ -39,7 +39,7 @@ interface AdminDashboardProps {
 export function AdminDashboard({ token }: AdminDashboardProps) {
   const { data, isLoading, error, mutate } = useSWR<VehicleResponse>(
     token ? ["/api/vehicles?includeDrafts=true&perPage=100", token] : null,
-    ([url, t]) => fetcher(url, t),
+    (args: [string, string]) => fetcher(args[0], args[1]),
     { refreshInterval: 60_000 },
   );
 
