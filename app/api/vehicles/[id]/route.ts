@@ -15,16 +15,21 @@ interface Params {
 }
 
 export async function GET(_request: Request, { params }: Params) {
-  const vehicle = await db.vehicle.findUnique({
-    where: { id: params.id },
-    include: { seller: true },
-  });
+  try {
+    const vehicle = await db.vehicle.findUnique({
+      where: { id: params.id },
+      include: { seller: true },
+    });
 
-  if (!vehicle) {
-    return new NextResponse("Not found", { status: 404 });
+    if (!vehicle) {
+      return new NextResponse("Not found", { status: 404 });
+    }
+
+    return NextResponse.json(vehicle);
+  } catch (error) {
+    console.error("Failed to fetch vehicle", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
-
-  return NextResponse.json(vehicle);
 }
 
 export async function PATCH(request: Request, { params }: Params) {
@@ -41,45 +46,50 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const data = parsed.data;
 
-  const current = await db.vehicle.findUnique({ where: { id: params.id } });
-  if (!current) {
-    return new NextResponse("Not found", { status: 404 });
-  }
-
-  let slug = current.slug;
-  const slugSource = slugify(data.brand, data.model, data.year);
-  if (slugSource && slugSource !== current.slug) {
-    slug = slugSource;
-    let counter = 1;
-    while (
-      await db.vehicle.findFirst({
-        where: { slug, NOT: { id: params.id } },
-      })
-    ) {
-      slug = `${slugSource}-${counter++}`;
+  try {
+    const current = await db.vehicle.findUnique({ where: { id: params.id } });
+    if (!current) {
+      return new NextResponse("Not found", { status: 404 });
     }
+
+    let slug = current.slug;
+    const slugSource = slugify(data.brand, data.model, data.year);
+    if (slugSource && slugSource !== current.slug) {
+      slug = slugSource;
+      let counter = 1;
+      while (
+        await db.vehicle.findFirst({
+          where: { slug, NOT: { id: params.id } },
+        })
+      ) {
+        slug = `${slugSource}-${counter++}`;
+      }
+    }
+
+    const updated = await db.vehicle.update({
+      where: { id: params.id },
+      data: {
+        slug,
+        title: data.title,
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        priceARS: data.priceARS || null,
+        km: data.km || null,
+        fuel: data.fuel || null,
+        gearbox: data.gearbox || null,
+        location: data.location || null,
+        description: data.description || null,
+        images: data.images,
+        sellerId: data.sellerId,
+        published: data.published,
+      },
+      include: { seller: true },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Failed to update vehicle", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
-
-  const updated = await db.vehicle.update({
-    where: { id: params.id },
-    data: {
-      slug,
-      title: data.title,
-      brand: data.brand,
-      model: data.model,
-      year: data.year,
-      priceARS: data.priceARS || null,
-      km: data.km || null,
-      fuel: data.fuel || null,
-      gearbox: data.gearbox || null,
-      location: data.location || null,
-      description: data.description || null,
-      images: data.images,
-      sellerId: data.sellerId,
-      published: data.published,
-    },
-    include: { seller: true },
-  });
-
-  return NextResponse.json(updated);
 }
