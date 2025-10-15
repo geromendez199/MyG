@@ -1,3 +1,9 @@
+import "server-only";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+// export const fetchCache = "force-no-store";
+
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -17,9 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 
   if (!vehicle) {
-    return {
-      title: "Vehículo no encontrado",
-    };
+    return { title: "Vehículo no encontrado" };
   }
 
   const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
@@ -36,6 +40,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
   };
 }
+
+// ...resto del archivo sin cambios
+
 
 export default async function VehicleDetailPage({ params }: PageProps) {
   const vehicle = await db.vehicle.findUnique({

@@ -1,3 +1,4 @@
+import "server-only";
 import React from "react";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -7,7 +8,9 @@ import { Filters } from "@/components/filters";
 import { VehicleCard } from "@/components/vehicle-card";
 import { Pagination } from "@/components/pagination";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+// export const fetchCache = "force-no-store"; // opcional
 
 async function getVehicles(searchParams: Record<string, string | string[] | undefined>) {
   const normalized = Object.fromEntries(
@@ -18,17 +21,13 @@ async function getVehicles(searchParams: Record<string, string | string[] | unde
   );
 
   const parsed = vehicleFiltersSchema.safeParse(normalized);
-
   const filters = parsed.success ? parsed.data : vehicleFiltersSchema.parse({});
 
-  const where: Prisma.VehicleWhereInput = {
-    published: true,
-  };
+  const where: Prisma.VehicleWhereInput = { published: true };
 
   if (filters.brand) {
     where.brand = { equals: filters.brand, mode: "insensitive" };
   }
-
   if (filters.q) {
     where.OR = [
       { title: { contains: filters.q, mode: "insensitive" } },
@@ -37,13 +36,11 @@ async function getVehicles(searchParams: Record<string, string | string[] | unde
       { description: { contains: filters.q, mode: "insensitive" } },
     ];
   }
-
   if (filters.yearMin || filters.yearMax) {
     where.year = {};
     if (filters.yearMin) where.year.gte = filters.yearMin;
     if (filters.yearMax) where.year.lte = filters.yearMax;
   }
-
   if (filters.priceMin || filters.priceMax) {
     where.priceARS = {};
     if (filters.priceMin) where.priceARS.gte = filters.priceMin;
