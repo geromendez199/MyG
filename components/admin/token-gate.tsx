@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminDashboard } from "./dashboard";
 
 const STORAGE_KEY = "mg-admin-token";
 
-interface TokenGateProps {
-  children: (token: string) => React.ReactNode;
-}
-
-export function TokenGate({ children }: TokenGateProps) {
+export function TokenGate() {
   const [token, setToken] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +43,7 @@ export function TokenGate({ children }: TokenGateProps) {
   };
 
   if (token) {
-    return <>{children(token)}</>;
+    return <AdminDashboard token={token} />;
   }
 
   return (
