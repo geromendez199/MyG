@@ -16,34 +16,34 @@ interface PageProps {
   params: { slug: string };
 }
 
+type VehicleWithSeller = Prisma.VehicleGetPayload<{
+  include: { seller: true };
+}>;
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const result = await fetchVehicleBySlug(params.slug).catch((error) => {
-    console.error("Failed to load vehicle metadata", error);
-    return { vehicle: null };
-  });
+  const { vehicle } = await fetchVehicleBySlug(params.slug);
 
-  const vehicle = result?.vehicle;
+    if (!vehicle) {
+      return { title: "Vehículo no encontrado" };
+    }
 
-  if (!vehicle) {
-    return { title: "Vehículo no disponible" };
-  }
+    const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
+    const description = vehicle.description || config.seo.description;
+    const image = vehicle.images[0];
 
-  const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
-  const description = vehicle.description || config.seo.description;
-  const image = vehicle.images[0];
-  const canonical = `${config.seo.url}/vehicle/${vehicle.slug}`;
-
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    openGraph: {
+    return {
       title,
       description,
-      url: canonical,
-      images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
-    },
-  } satisfies Metadata;
+      openGraph: {
+        title,
+        description,
+        images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to load vehicle metadata", error);
+    return { title: "Vehículo no disponible" };
+  }
 }
 
 export default async function VehicleDetailPage({ params }: PageProps) {
@@ -63,9 +63,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
       </a>
       {fallback ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Estás viendo una ficha de demostración. Configurá la base de datos y cargá tus vehículos reales desde el panel de administración para
-          {" "}
-          actualizar este detalle.
+          Estás viendo una ficha de demostración. Configurá la base de datos para cargar tus vehículos reales y actualizar este detalle.
         </div>
       ) : null}
       <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
