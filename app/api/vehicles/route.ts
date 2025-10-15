@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
-import { db } from "@/lib/db";
+
+import { getDb } from "@/lib/db";
+import { fetchVehicles } from "@/lib/vehicle-repository";
 import { config } from "@/lib/config";
 import { slugify } from "@/lib/slug";
 import { vehicleFiltersSchema, vehicleInputSchema } from "@/lib/validators";
@@ -19,73 +20,33 @@ export async function GET(request: Request) {
   const parsed = vehicleFiltersSchema.safeParse(params);
   const filters = parsed.success ? parsed.data : vehicleFiltersSchema.parse({});
 
-  const where: Prisma.VehicleWhereInput = includeDrafts
-    ? {}
-    : {
-        published: true,
-      };
+  const result = await fetchVehicles(filters, { includeDrafts });
 
-  if (filters.brand) {
-    where.brand = { equals: filters.brand, mode: "insensitive" };
-  }
-
-  if (filters.q) {
-    where.OR = [
-      { title: { contains: filters.q, mode: "insensitive" } },
-      { brand: { contains: filters.q, mode: "insensitive" } },
-      { model: { contains: filters.q, mode: "insensitive" } },
-      { description: { contains: filters.q, mode: "insensitive" } },
-    ];
-  }
-
-  if (filters.yearMin || filters.yearMax) {
-    where.year = {};
-    if (filters.yearMin) where.year.gte = filters.yearMin;
-    if (filters.yearMax) where.year.lte = filters.yearMax;
-  }
-
-  if (filters.priceMin || filters.priceMax) {
-    where.priceARS = {};
-    if (filters.priceMin) where.priceARS.gte = filters.priceMin;
-    if (filters.priceMax) where.priceARS.lte = filters.priceMax;
-  }
-
-  const skip = (filters.page - 1) * filters.perPage;
-  const take = filters.perPage;
-
-  try {
-    const [items, total] = await Promise.all([
-      db.vehicle.findMany({
-        where,
-        include: { seller: true },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take,
-      }),
-      db.vehicle.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      items,
-      pagination: {
-        page: filters.page,
-        perPage: filters.perPage,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / filters.perPage)),
-      },
-    });
-  } catch (error) {
-    console.error("Failed to fetch vehicles", error);
-    return NextResponse.json(
-      { error: "Error interno al obtener los vehículos" },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json({
+    items: result.items,
+    pagination: {
+      page: result.page,
+      perPage: result.perPage,
+      total: result.total,
+      totalPages: result.totalPages,
+    },
+    fallback: result.fallback,
+  });
 }
 
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      {
+        error:
+          "No hay conexión a la base de datos. Configurá DATABASE_URL y volvemos a intentar.",
+      },
+      { status: 503 },
+    );
   }
 
   const json = await request.json();
@@ -101,6 +62,8 @@ export async function POST(request: Request) {
     const baseSlug = slugify(data.brand, data.model, data.year);
     let slug = baseSlug;
     let counter = 1;
+
+    const db = getDb();
 
     while (await db.vehicle.findUnique({ where: { slug } })) {
       slug = `${baseSlug}-${counter++}`;

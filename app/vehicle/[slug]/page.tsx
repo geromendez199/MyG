@@ -6,10 +6,9 @@ export const revalidate = 0;
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import type { Prisma } from "@prisma/client";
 
 import { config } from "@/lib/config";
-import { db } from "@/lib/db";
+import { fetchVehicleBySlug } from "@/lib/vehicle-repository";
 import { formatCurrency, formatKm } from "@/lib/format";
 import { waHref } from "@/lib/whatsapp";
 
@@ -22,11 +21,7 @@ type VehicleWithSeller = Prisma.VehicleGetPayload<{
 }>;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  try {
-    const vehicle = await db.vehicle.findUnique({
-      where: { slug: params.slug },
-      include: { seller: true },
-    });
+  const { vehicle } = await fetchVehicleBySlug(params.slug);
 
     if (!vehicle) {
       return { title: "Vehículo no encontrado" };
@@ -52,31 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function VehicleDetailPage({ params }: PageProps) {
-  let vehicle: VehicleWithSeller | null = null;
-  let hasError = false;
-
-  try {
-    vehicle = await db.vehicle.findUnique({
-      where: { slug: params.slug },
-      include: { seller: true },
-    });
-  } catch (error) {
-    console.error("Failed to load vehicle detail", error);
-    hasError = true;
-  }
-
-  if (hasError) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-12 px-4 py-12">
-        <a href="/" className="text-sm text-slate-600">
-          ← Volver al listado
-        </a>
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-10 text-red-700 shadow-sm">
-          No pudimos cargar la información del vehículo. Revisá la conexión a la base de datos e intentá nuevamente.
-        </div>
-      </div>
-    );
-  }
+  const { vehicle, fallback } = await fetchVehicleBySlug(params.slug);
 
   if (!vehicle) {
     notFound();
@@ -90,6 +61,11 @@ export default async function VehicleDetailPage({ params }: PageProps) {
       <a href="/" className="text-sm text-slate-600">
         ← Volver al listado
       </a>
+      {fallback ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Estás viendo una ficha de demostración. Configurá la base de datos para cargar tus vehículos reales y actualizar este detalle.
+        </div>
+      ) : null}
       <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         {cover && (
           <div className="relative h-96 w-full overflow-hidden">

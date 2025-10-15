@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+
+import { getDb } from "@/lib/db";
+import { fetchVehicleById } from "@/lib/vehicle-repository";
 import { config } from "@/lib/config";
 import { slugify } from "@/lib/slug";
 import { vehicleInputSchema } from "@/lib/validators";
@@ -15,26 +17,32 @@ interface Params {
 }
 
 export async function GET(_request: Request, { params }: Params) {
-  try {
-    const vehicle = await db.vehicle.findUnique({
-      where: { id: params.id },
-      include: { seller: true },
-    });
+  const result = await fetchVehicleById(params.id);
 
-    if (!vehicle) {
-      return new NextResponse("Not found", { status: 404 });
-    }
-
-    return NextResponse.json(vehicle);
-  } catch (error) {
-    console.error("Failed to fetch vehicle", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+  if (!result.vehicle) {
+    return new NextResponse("Not found", { status: 404 });
   }
+
+  const response = NextResponse.json(result.vehicle);
+  if (result.fallback) {
+    response.headers.set("x-data-source", "fallback");
+  }
+  return response;
 }
 
 export async function PATCH(request: Request, { params }: Params) {
   if (!isAuthorized(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      {
+        error:
+          "No hay conexión a la base de datos. Configurá DATABASE_URL y volvemos a intentar.",
+      },
+      { status: 503 },
+    );
   }
 
   const json = await request.json();
@@ -47,6 +55,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const data = parsed.data;
 
   try {
+    const db = getDb();
     const current = await db.vehicle.findUnique({ where: { id: params.id } });
     if (!current) {
       return new NextResponse("Not found", { status: 404 });
