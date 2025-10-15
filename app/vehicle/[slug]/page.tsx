@@ -2,7 +2,7 @@ import "server-only";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-// export const fetchCache = "force-no-store";.
+// export const fetchCache = "force-no-store";
 
 import Image from "next/image";
 import type { Metadata } from "next";
