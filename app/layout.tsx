@@ -6,8 +6,19 @@ import "@/styles/globals.css";
 
 function hexToRgbComponents(hex: string): string | null {
   const normalized = hex.replace("#", "");
-  if (normalized.length !== 6) return null;
-  const bigint = Number.parseInt(normalized, 16);
+  const expanded =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((char) => `${char}${char}`)
+          .join("")
+      : normalized.length === 6
+        ? normalized
+        : null;
+
+  if (!expanded) return null;
+
+  const bigint = Number.parseInt(expanded, 16);
   const r = (bigint >> 16) & 255;
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
@@ -17,11 +28,18 @@ function hexToRgbComponents(hex: string): string | null {
 const primary = hexToRgbComponents(config.primary) ?? "30 58 138"; // tailwind indigo-800
 const secondary = hexToRgbComponents(config.secondary) ?? "249 115 22"; // tailwind orange-500
 const supportPhone = config.contacts.ownerPhone?.replace(/[^0-9]/g, "");
+const metadataBase = (() => {
+  try {
+    return new URL(config.seo.url);
+  } catch {
+    return undefined;
+  }
+})();
 
 export const metadata: Metadata = {
   title: config.seo.title,
   description: config.seo.description,
-  metadataBase: new URL(config.seo.url),
+  ...(metadataBase ? { metadataBase } : {}),
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -29,7 +47,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="es">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"

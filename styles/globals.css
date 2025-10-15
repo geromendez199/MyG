@@ -9,7 +9,7 @@
 
 @layer base {
   body {
-    @apply min-h-screen bg-slate-100 text-slate-900 antialiased;
+    @apply min-h-screen bg-slate-100 text-slate-900 antialiased font-sans;
     font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
