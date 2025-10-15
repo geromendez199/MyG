@@ -1,16 +1,24 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 
 import { config } from "@/lib/config";
 import "@/styles/globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-
 function hexToRgbComponents(hex: string): string | null {
   const normalized = hex.replace("#", "");
-  if (normalized.length !== 6) return null;
-  const bigint = Number.parseInt(normalized, 16);
+  const expanded =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((char) => `${char}${char}`)
+          .join("")
+      : normalized.length === 6
+        ? normalized
+        : null;
+
+  if (!expanded) return null;
+
+  const bigint = Number.parseInt(expanded, 16);
   const r = (bigint >> 16) & 255;
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
@@ -20,16 +28,31 @@ function hexToRgbComponents(hex: string): string | null {
 const primary = hexToRgbComponents(config.primary) ?? "30 58 138"; // tailwind indigo-800
 const secondary = hexToRgbComponents(config.secondary) ?? "249 115 22"; // tailwind orange-500
 const supportPhone = config.contacts.ownerPhone?.replace(/[^0-9]/g, "");
+const metadataBase = (() => {
+  try {
+    return new URL(config.seo.url);
+  } catch {
+    return undefined;
+  }
+})();
 
 export const metadata: Metadata = {
   title: config.seo.title,
   description: config.seo.description,
-  metadataBase: new URL(config.seo.url),
+  ...(metadataBase ? { metadataBase } : {}),
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={inter.variable}>
+    <html lang="es">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        />
+      </head>
       <body
         style={
           {
@@ -39,7 +62,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         }
         className="bg-slate-100 text-slate-900 antialiased"
       >
-        <div className="relative flex min-h-screen flex-col font-[family-name:var(--font-sans)]">
+        <div className="relative flex min-h-screen flex-col">
           <div className="pointer-events-none absolute inset-x-0 top-[-10rem] z-0 h-[32rem] bg-gradient-to-b from-primary/15 via-primary/5 to-transparent" />
           <header className="sticky top-0 z-40 border-b border-white/60 bg-white/80 shadow-sm backdrop-blur">
             <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4">
