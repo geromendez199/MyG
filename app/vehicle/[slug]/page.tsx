@@ -16,26 +16,34 @@ interface PageProps {
   params: { slug: string };
 }
 
+type VehicleWithSeller = Prisma.VehicleGetPayload<{
+  include: { seller: true };
+}>;
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { vehicle } = await fetchVehicleBySlug(params.slug);
 
-  if (!vehicle) {
-    return { title: "Vehículo no encontrado" };
-  }
+    if (!vehicle) {
+      return { title: "Vehículo no encontrado" };
+    }
 
-  const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
-  const description = vehicle.description || config.seo.description;
-  const image = vehicle.images[0];
+    const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
+    const description = vehicle.description || config.seo.description;
+    const image = vehicle.images[0];
 
-  return {
-    title,
-    description,
-    openGraph: {
+    return {
       title,
       description,
-      images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
-    },
-  };
+      openGraph: {
+        title,
+        description,
+        images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to load vehicle metadata", error);
+    return { title: "Vehículo no disponible" };
+  }
 }
 
 export default async function VehicleDetailPage({ params }: PageProps) {
