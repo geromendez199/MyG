@@ -30,7 +30,7 @@ export function Filters() {
   );
 
   const updateParam = (key: string, value: string) => {
-    const newParams = new URLSearchParams(params);
+    const newParams = new URLSearchParams(params.toString());
     if (value) {
       newParams.set(key, value);
     } else {
