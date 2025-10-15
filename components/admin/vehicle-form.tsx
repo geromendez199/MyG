@@ -69,7 +69,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
 
   const { data: sellers } = useSWR<{ sellers: Seller[] }>(
     token ? ["/api/admin/sellers", token] : null,
-    ([url, t]) => fetcher(url, t),
+    (args: [string, string]) => fetcher(args[0], args[1]),
   );
 
   const isEditing = useMemo(() => Boolean(form.id), [form.id]);
