@@ -1,42 +1,19 @@
-import "../styles/globals.css";
-import type { Metadata } from "next";
-import type { CSSProperties, ReactNode } from "react";
-import { config, siteName } from "@/lib/config";
-
-export const metadata: Metadata = {
-  title: {
-    default: config.seo.title,
-    template: `%s | ${siteName}`,
-  },
-  description: config.seo.description,
-  openGraph: {
-    title: config.seo.title,
-    description: config.seo.description,
-    url: config.seo.url,
-    siteName,
-    type: "website",
-  },
-  metadataBase: new URL(config.seo.url || "https://localhost:3000"),
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const themeStyle: CSSProperties & {
-    "--color-primary"?: string;
-    "--color-secondary"?: string;
-  } = {
-    "--color-primary": config.primary,
-    "--color-secondary": config.secondary,
-  };
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Usar valores por defecto para las variables CSS
+  const primary = "255 26 26"; // #ff1a1a
+  const secondary = "255 255 255"; // #ffffff
   return (
     <html lang="es">
-      <body style={themeStyle}>
+      <body
+        style={{
+          ["--primary"]: primary,
+          ["--secondary"]: secondary,
+        } as React.CSSProperties}
+        className="min-h-dvh bg-black text-white"
+      >
         {children}
       </body>
     </html>
   );
 }
+

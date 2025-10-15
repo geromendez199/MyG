@@ -1,27 +1,14 @@
-import type { Config } from "tailwindcss";
-import defaultTheme from "tailwindcss/defaultTheme";
-
-function cssVar(name: string, fallback: string) {
-  return `var(${name}, ${fallback})`;
-}
-
-const config: Config = {
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
+const config = {
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ["Inter", ...defaultTheme.fontFamily.sans],
-      },
       colors: {
-        primary: cssVar("--color-primary", "#1e3a8a"),
-        secondary: cssVar("--color-secondary", "#f97316"),
+        // Permite usar bg-primary, text-primary, etc. con opacidad: bg-primary/90
+        primary: "rgb(var(--primary) / <alpha-value>)",
+        secondary: "rgb(var(--secondary) / <alpha-value>)",
       },
     },
   },
   plugins: [],
 };
-
 export default config;

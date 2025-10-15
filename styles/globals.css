@@ -2,23 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ① Variables con valores por defecto (RGB con espacios) */
 :root {
-  --color-primary: #1e3a8a;
-  --color-secondary: #f97316;
+  --primary: 255 26 26;   /* #ff1a1a */
+  --secondary: 255 255 255; /* #ffffff */
 }
 
-body {
-  @apply bg-slate-50 text-slate-900 font-sans;
+/* ② (Opcional) modo oscuro si querés cambiar algo
+@media (prefers-color-scheme: dark) {
+  :root {
+    --secondary: 255 255 255;
+  }
 }
+*/
 
-a {
-  @apply text-primary underline-offset-4 hover:underline;
-}
-
-.btn-primary {
-  @apply inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
-}
-
-.btn-secondary {
-  @apply inline-flex items-center justify-center rounded-md border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10;
+/* ③ Utilidades de botones, usando los colores definidos arriba */
+@layer components {
+  .btn-primary {
+      @apply inline-flex items-center justify-center rounded-md bg-primary px-4 py-2
+        text-sm font-semibold text-white shadow transition
+        hover:bg-primary/80
+        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-md border border-primary/20
+      bg-white px-4 py-2 text-sm font-semibold text-primary
+      hover:bg-primary/10
+      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary;
+  }
 }
