@@ -11,7 +11,7 @@ Landing responsive con catálogo de vehículos usados, filtros básicos, detalle
 - Página de detalle por `slug` con metadatos SEO/OG.
 - Panel de alta/edición protegido por `ADMIN_TOKEN`, con subida de imágenes a Supabase Storage.
 - API REST (`/api/vehicles`, `/api/vehicles/[id]`, `/api/uploads`, `/api/admin/*`).
-- Seed inicial con vendedores y un vehículo de ejemplo.
+- Seed inicial con vendedores y placeholders seguros (sin datos reales).
 - Theming dinámico desde variables de entorno (`NEXT_PUBLIC_PRIMARY`, `NEXT_PUBLIC_SECONDARY`).
 
 ## 🗂️ Estructura principal
@@ -41,42 +41,58 @@ styles/globals.css           # Tailwind + theming
 
 ## ⚙️ Variables de entorno
 
-Crear `.env.local` a partir de `.env.example` y completar:
+Copiá `.env.example` a `.env.local` y completá los placeholders con tus credenciales reales:
 
 ```env
-DATABASE_URL=
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE=
-SUPABASE_BUCKET=vehicles
-ADMIN_TOKEN=
-SELLER_MARTIN_PHONE=
-SELLER_OWNER_NAME=
-SELLER_OWNER_PHONE=
-NEXT_PUBLIC_PRIMARY=
-NEXT_PUBLIC_SECONDARY=
-NEXT_PUBLIC_SITE_URL=
+# --- Base de datos (Supabase / Postgres)
+
+# Usa SIEMPRE el POOLER (PgBouncer) en producción (Vercel)
+DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@YOUR_HOST.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1"
+
+# Para migraciones locales (puerto 5432 SIN pgbouncer)
+DIRECT_URL="postgresql://postgres:YOUR_PASSWORD@YOUR_HOST.supabase.co:5432/postgres"
+
+# --- Supabase (API + Storage)
+
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_ANON_KEY"
+SUPABASE_SERVICE_ROLE="YOUR_SERVICE_ROLE_KEY"
+SUPABASE_BUCKET="vehicles"
+
+# --- Admin + datos del vendedor
+
+ADMIN_TOKEN="cambiame_por_un_token_largo_unico"
+SELLER_OWNER_NAME="Gerónimo Mendez"
+SELLER_OWNER_PHONE="+54911XXXXXXXX"
 ```
 
-> **Nota:** El `SUPABASE_SERVICE_ROLE` solo se usa en el backend (rutas protegidas) para subir imágenes. No exponerlo en el cliente.
+Variables adicionales opcionales:
+
+- `SELLER_MARTIN_PHONE`: teléfono E.164 de Martin Alloatti para que el seed cree su usuario automáticamente.
+- `NEXT_PUBLIC_PRIMARY`, `NEXT_PUBLIC_SECONDARY`, `NEXT_PUBLIC_SITE_URL`: theming y metadatos de la landing.
+
+> **Importante:** El `SUPABASE_SERVICE_ROLE` solo se usa en el backend. Nunca lo expongas en componentes cliente ni en el explorador.
 
 ## 🛠️ Scripts
 
 | Comando | Descripción |
 | --- | --- |
-| `pnpm dev` | Ejecuta el modo desarrollo (Next.js). |
-| `pnpm build` | Build de producción. |
-| `pnpm start` | Arranca el servidor en modo producción. |
-| `pnpm lint` | Linting con ESLint. |
-| `pnpm prisma:generate` | Genera el cliente Prisma. |
-| `pnpm prisma:migrate` | Ejecuta `prisma migrate dev`. |
-| `pnpm seed` | Corre `scripts/seed.ts` con `tsx`. |
+| `npm run dev` | Ejecuta el modo desarrollo (Next.js). |
+| `npm run build` | Build de producción (incluye `prisma generate`). |
+| `npm run start` | Arranca el servidor en modo producción. |
+| `npm run lint` | Linting con ESLint. |
+| `npm run db:generate` | Genera el cliente Prisma para entornos con pooler. |
+| `npm run db:migrate` | Ejecuta `prisma migrate deploy` (ideal para CI/Vercel). |
+| `npm run diag` | Diagnóstico rápido de variables, DB y Storage. |
+| `npm run test:upload` | Sube un archivo dummy a Supabase Storage y muestra la URL pública. |
+| `npm run prisma:migrate` | Ejecuta `prisma migrate dev` en desarrollo local. |
+| `npm run seed` | Corre `scripts/seed.ts` con `tsx`. |
 
 ## 🚀 Setup local
 
 1. Instalar dependencias:
    ```bash
-   pnpm i
+   npm install
    ```
 2. Copiar variables de entorno:
    ```bash
@@ -85,25 +101,56 @@ NEXT_PUBLIC_SITE_URL=
    ```
 3. Preparar Prisma:
    ```bash
-   pnpm prisma:generate
-   pnpm prisma:migrate
+   npm run db:generate
+   npm run prisma:migrate
    ```
-4. Ejecutar semilla inicial (opcional recomendado):
+4. Diagnosticar conectividad (opcional recomendado):
    ```bash
-   pnpm seed
+   npm run diag
+   npm run test:upload
    ```
-5. Correr el servidor de desarrollo:
+5. Ejecutar semilla inicial (opcional):
    ```bash
-   pnpm dev
+   npm run seed
+   ```
+6. Correr el servidor de desarrollo:
+   ```bash
+   npm run dev
    ```
 
 La app queda disponible en `http://localhost:3000`.
 
+## 🤝 Gestión de inventario
+
+> Si no configurás `DATABASE_URL`, la landing mostrará un catálogo de demostración **con placeholders** para que nadie confunda la demo con stock real. Una vez conectada la base de datos, toda la información vendrá de tu inventario real.
+
+Las publicaciones se gestionan internamente por el equipo comercial. Los clientes interesados se contactan con Martin o Gerónimo y nosotros mismos cargamos cada unidad desde Supabase para mantener la consistencia del catálogo público y privado.
+
+- El panel `/admin` y las APIs permanecen activos para uso interno.
+- El seed (`npm run seed`) crea vendedores y vehículos de ejemplo en entornos de prueba.
+
 ## 🗄️ Base de datos y Storage
 
 - **Supabase (PostgreSQL):** crear proyecto, copiar el `DATABASE_URL` y configurarlo en `.env.local`.
-- **Migrations:** usar `pnpm prisma:migrate` en desarrollo. Para producción, ejecutar `prisma migrate deploy` (Vercel → comando custom o `pnpm prisma migrate deploy`).
+- **Migrations:** usar `npm run prisma:migrate` en desarrollo. Para producción, ejecutar `npm run db:migrate` (equivale a `prisma migrate deploy`).
 - **Storage:** crear bucket `vehicles` con lectura pública. El upload se realiza desde `/api/uploads` usando el `SUPABASE_SERVICE_ROLE` en el backend.
+
+### 📦 Políticas de Storage
+
+Ejecutá este SQL en el editor de Supabase para asegurarte de que el bucket sea público:
+
+```sql
+-- Hacer público el bucket si no existe (cambiar 'vehicles' si usas otro)
+insert into storage.buckets (id, name, public)
+values ('vehicles', 'vehicles', true)
+on conflict (id) do update set public = true;
+
+-- Permitir lectura pública
+create policy if not exists "Public read" on storage.objects
+for select using ( bucket_id = 'vehicles' );
+
+-- Escritura: service_role la hace por RLS bypass (no se requiere policy extra).
+```
 
 ## 🔐 Seguridad mínima
 
@@ -120,12 +167,29 @@ La app queda disponible en `http://localhost:3000`.
 - [x] SEO básico + OG en landing y detalle.
 - [x] Panel protegido con token.
 
+## ✅ Checklist de verificación
+
+1. **Local**
+   - Copiar `.env.example` a `.env.local` y completar credenciales reales.
+   - `npm install`
+   - `npm run db:generate` y `npm run prisma:migrate`
+   - `npm run diag` → debería mostrar `✅ DB OK` y, si faltan claves, indicarlas.
+   - `npm run test:upload` → imprime la URL pública generada por Supabase Storage.
+2. **Supabase**
+   - Proyecto activo con Postgres accesible desde internet.
+   - Bucket `vehicles` (o el definido en `SUPABASE_BUCKET`) marcado como **Public**.
+   - SQL de políticas ejecutado y sin errores.
+3. **Vercel**
+   - En `Project → Settings → Environment Variables`, cargar los mismos valores de `.env.local` para los entornos **Production**, **Preview** y **Development**.
+   - Redeploy manual tras actualizar las variables.
+   - Verificar `/admin`: ingresar `ADMIN_TOKEN`, confirmar que desaparece el aviso de demo y que la edición/ subida de imágenes responde 200.
+
 ## ☁️ Deploy en Vercel
 
 1. Crear proyecto nuevo en Vercel y conectar el repositorio.
-2. Configurar las variables de entorno (mismas que `.env.local`).
+2. En `Project → Settings → Environment Variables`, cargar los mismos valores de `.env.local` para los entornos **Production**, **Preview** y **Development** (`DATABASE_URL`, `DIRECT_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE`, `SUPABASE_BUCKET`, `ADMIN_TOKEN`, `SELLER_OWNER_NAME`, `SELLER_OWNER_PHONE`, `SELLER_MARTIN_PHONE`, colores opcionales).
 3. Configurar Supabase (DB + Storage) accesible desde Vercel.
-4. Opcional: agregar script `pnpm prisma migrate deploy` en “Build & Development Settings → Post-install Command”.
+4. Opcional: agregar script `npm run db:migrate` en “Build & Development Settings → Post-install Command” para aplicar migraciones automáticamente.
 5. Deploy automático en cada push a la rama principal.
 
 ¡Listo! El sitio queda listo para publicar inventario de vehículos y gestionarlo con un panel simple.

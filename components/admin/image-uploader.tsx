@@ -5,23 +5,26 @@ import { useCallback, useRef, useState } from "react";
 interface ImageUploaderProps {
   token: string;
   onUploaded: (urls: string[]) => void;
+  disabled?: boolean;
+  disabledMessage?: string;
 }
 
-export function ImageUploader({ token, onUploaded }: ImageUploaderProps) {
+export function ImageUploader({ token, onUploaded, disabled = false, disabledMessage }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const uploadFiles = useCallback(
     async (files: FileList | null) => {
-      if (!files || files.length === 0) return;
+      if (disabled || !files || files.length === 0) return;
       setLoading(true);
       setError(null);
       const uploaded: string[] = [];
       try {
         for (const file of Array.from(files)) {
           const form = new FormData();
-          form.append("file", file);
+          // Preserve the original filename so Supabase infers a useful extension.
+          form.append("file", file, file.name);
           const res = await fetch("/api/uploads", {
             method: "POST",
             headers: {
@@ -30,7 +33,19 @@ export function ImageUploader({ token, onUploaded }: ImageUploaderProps) {
             body: form,
           });
           if (!res.ok) {
-            throw new Error("No se pudo subir la imagen");
+            const message = await res.text();
+            let reason = "No se pudo subir la imagen";
+            try {
+              const parsed = JSON.parse(message) as { error?: string };
+              if (parsed.error) {
+                reason = parsed.error;
+              }
+            } catch {
+              if (message) {
+                reason = message;
+              }
+            }
+            throw new Error(reason);
           }
           const data = (await res.json()) as { url: string };
           uploaded.push(data.url);
@@ -42,7 +57,7 @@ export function ImageUploader({ token, onUploaded }: ImageUploaderProps) {
         setLoading(false);
       }
     },
-    [onUploaded, token],
+    [disabled, onUploaded, token],
   );
 
   return (
@@ -53,7 +68,7 @@ export function ImageUploader({ token, onUploaded }: ImageUploaderProps) {
           type="button"
           className="ml-1 text-primary underline"
           onClick={() => inputRef.current?.click()}
-          disabled={loading}
+          disabled={loading || disabled}
         >
           seleccioná archivos
         </button>
@@ -65,6 +80,7 @@ export function ImageUploader({ token, onUploaded }: ImageUploaderProps) {
         multiple
         className="hidden"
         onChange={(event) => void uploadFiles(event.target.files)}
+        disabled={disabled}
       />
       <div
         className="mt-4 rounded-lg bg-white p-4 text-xs text-slate-500"
@@ -77,7 +93,11 @@ export function ImageUploader({ token, onUploaded }: ImageUploaderProps) {
           void uploadFiles(event.dataTransfer.files);
         }}
       >
-        {loading ? "Subiendo imágenes..." : "Formatos admitidos: JPG, PNG. Máx 5MB."}
+        {disabled
+          ? disabledMessage ?? "Configurá Supabase para habilitar la carga de imágenes."
+          : loading
+            ? "Subiendo imágenes..."
+            : "Formatos admitidos: JPG, PNG. Máx 5MB."}
       </div>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+
 import { config } from "@/lib/config";
+import { SAMPLE_SELLERS } from "@/lib/sample-data";
+import { getDb } from "@/lib/db";
+import { fallback as isFallbackMode, flags } from "@/lib/env";
 
 function isAuthorized(request: Request) {
   const token = request.headers.get("authorization");
@@ -14,10 +17,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ sellers: [] });
   }
 
-  const sellers = await db.seller.findMany({
-    where: { active: true },
-    orderBy: { name: "asc" },
-  });
+  if (isFallbackMode || !flags.hasDB) {
+    return NextResponse.json({ sellers: SAMPLE_SELLERS, fallback: true });
+  }
 
-  return NextResponse.json({ sellers });
+  try {
+    const db = getDb();
+    const sellers = await db.seller.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+    });
+
+    return NextResponse.json({ sellers, fallback: false });
+  } catch (error) {
+    console.warn("Falling back to sample sellers due to database error", error);
+    return NextResponse.json({ sellers: SAMPLE_SELLERS, fallback: true });
+  }
 }
