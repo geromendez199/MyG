@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChatBubbleLeftRightIcon, MapPinIcon } from "@heroicons/react/24/outline";
+import { Seller, Vehicle } from "@prisma/client";
+
+import { formatCurrency, formatKm } from "@/lib/format";
+import { waHref } from "@/lib/whatsapp";
 
 import { type VehicleWithSeller } from "@/lib/types";
 import { formatCurrency, formatKm } from "@/lib/format";
