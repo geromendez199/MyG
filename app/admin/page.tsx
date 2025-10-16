@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { TokenGate } from "@/components/admin/token-gate";
-import { AdminDashboard } from "@/components/admin/dashboard";
-import { siteName } from "@/lib/config";
+import { config, siteName } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: `Panel | ${siteName}`,
@@ -16,7 +15,7 @@ export default function AdminPage() {
           Cargá nuevas unidades, editá información existente y gestioná las imágenes desde un único lugar protegido por token.
         </p>
       </header>
-      <TokenGate />
+      <TokenGate storageEnabled={config.flags.hasStorage} />
     </div>
   );
 }
