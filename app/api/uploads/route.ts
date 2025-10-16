@@ -8,11 +8,27 @@ function isAuthorized(request: Request) {
   return token === `Bearer ${config.adminToken}`;
 }
 
-export const runtime = "edge";
+// We rely on Supabase's Node client to upload binary payloads. The storage
+// helpers are not fully compatible with the Edge runtime, so we explicitly use
+// the Node runtime to avoid subtle "unsupported platform" errors in production.
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  // When Supabase credentials are missing we want to fail fast with a
+  // descriptive message rather than throwing and returning a generic 500.
+  const { url, serviceRole, bucket } = config.supabase;
+  if (!url || !serviceRole || !bucket) {
+    return NextResponse.json(
+      {
+        error:
+          "Supabase no está configurado. Definí NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE y SUPABASE_BUCKET para habilitar las cargas.",
+      },
+      { status: 503 },
+    );
   }
 
   const formData = await request.formData();
@@ -31,24 +47,32 @@ export async function POST(request: Request) {
     return new NextResponse("Imagen demasiado grande (máx 5MB)", { status: 400 });
   }
 
-  const supabase = supabaseAdmin();
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `${crypto.randomUUID()}.${ext}`;
+  try {
+    const supabase = supabaseAdmin();
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${crypto.randomUUID()}.${ext}`;
 
-  const { data, error } = await supabase.storage
-    .from(config.supabase.bucket)
-    .upload(path, await file.arrayBuffer(), {
-      contentType: file.type,
-      upsert: false,
-    });
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(path, await file.arrayBuffer(), {
+        contentType: file.type,
+        upsert: false,
+      });
 
-  if (error) {
-    return new NextResponse(error.message, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 502 });
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(data.path);
+
+    return NextResponse.json({ url: publicUrl });
+  } catch (error) {
+    console.error("Supabase upload failed", error);
+    return NextResponse.json(
+      { error: "No se pudo subir la imagen. Revisá la configuración de Supabase." },
+      { status: 500 },
+    );
   }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(config.supabase.bucket).getPublicUrl(data.path);
-
-  return NextResponse.json({ url: publicUrl });
 }
