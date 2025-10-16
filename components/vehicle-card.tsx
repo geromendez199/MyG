@@ -45,6 +45,7 @@ export function VehicleCard({ vehicle }: Props) {
             {formatKm(vehicle.km)} · {vehicle.fuel ?? "-"}
           </p>
         </header>
+
         <p className="flex items-center gap-1 text-sm text-slate-500">
           <MapPinIcon className="h-4 w-4" />
           {vehicle.location ?? "Sin ubicación"}
