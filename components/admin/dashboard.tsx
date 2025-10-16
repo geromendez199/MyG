@@ -17,6 +17,7 @@ interface VehicleResponse {
   pagination: {
     total: number;
   };
+  fallback: boolean;
 }
 
 const fetcher = (url: string, token: string) =>
@@ -44,6 +45,8 @@ export function AdminDashboard({ token }: AdminDashboardProps) {
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const fallback = data?.fallback ?? false;
 
   const selectedVehicle = useMemo(() => {
     if (!data?.items || !selectedId) return undefined;
@@ -93,9 +96,16 @@ export function AdminDashboard({ token }: AdminDashboardProps) {
       </aside>
       <main className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-slate-900">
-            {selectedVehicle ? "Editar vehículo" : "Crear vehículo"}
-          </h2>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <h2 className="text-2xl font-semibold text-slate-900">
+              {selectedVehicle ? "Editar vehículo" : "Crear vehículo"}
+            </h2>
+            {fallback && (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800">
+                Demo sin base de datos
+              </span>
+            )}
+          </div>
           <p className="mt-2 text-sm text-slate-600">
             Completá los campos y recordá cargar al menos una imagen para destacarlo en la landing.
           </p>
@@ -106,6 +116,7 @@ export function AdminDashboard({ token }: AdminDashboardProps) {
           onSaved={() => {
             void mutate();
           }}
+          fallback={fallback}
         />
       </main>
     </div>
