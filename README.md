@@ -11,7 +11,7 @@ Landing responsive con catálogo de vehículos usados, filtros básicos, detalle
 - Página de detalle por `slug` con metadatos SEO/OG.
 - Panel de alta/edición protegido por `ADMIN_TOKEN`, con subida de imágenes a Supabase Storage.
 - API REST (`/api/vehicles`, `/api/vehicles/[id]`, `/api/uploads`, `/api/admin/*`).
-- Seed inicial con vendedores y un vehículo de ejemplo.
+- Seed inicial con vendedores y placeholders seguros (sin datos reales).
 - Theming dinámico desde variables de entorno (`NEXT_PUBLIC_PRIMARY`, `NEXT_PUBLIC_SECONDARY`).
 
 ## 🗂️ Estructura principal
@@ -98,6 +98,15 @@ NEXT_PUBLIC_SITE_URL=
    ```
 
 La app queda disponible en `http://localhost:3000`.
+
+## 🤝 Gestión de inventario
+
+> Si no configurás `DATABASE_URL`, la landing mostrará un catálogo de demostración **con placeholders** para que nadie confunda la demo con stock real. Una vez conectada la base de datos, toda la información vendrá de tu inventario real.
+
+Las publicaciones se gestionan internamente por el equipo comercial. Los clientes interesados se contactan con Martin o Gerónimo y nosotros mismos cargamos cada unidad desde Supabase para mantener la consistencia del catálogo público y privado.
+
+- El panel `/admin` y las APIs permanecen activos para uso interno.
+- El seed (`pnpm seed`) crea vendedores y vehículos de ejemplo en entornos de prueba.
 
 ## 🗄️ Base de datos y Storage
 
