@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import { ImageUploader } from "./image-uploader";
@@ -40,6 +40,8 @@ interface VehicleFormProps {
   token: string;
   vehicle?: AdminVehicle;
   onSaved?: () => void;
+  fallback?: boolean;
+  storageEnabled?: boolean;
 }
 
 const createEmptyVehicle = (): AdminVehicle => ({
@@ -58,7 +60,13 @@ const createEmptyVehicle = (): AdminVehicle => ({
   published: true,
 });
 
-export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
+export function VehicleForm({
+  token,
+  vehicle,
+  onSaved,
+  fallback = false,
+  storageEnabled = true,
+}: VehicleFormProps) {
   const [form, setForm] = useState<AdminVehicle>(vehicle ? { ...vehicle } : createEmptyVehicle());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,8 +103,14 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
     }));
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (fallback) {
+      setError(
+        "La base de datos no está disponible en este momento. Coordiná con el equipo para reintentar cuando Supabase esté online.",
+      );
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -122,7 +136,20 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
       });
       if (!res.ok) {
         const message = await res.text();
-        throw new Error(message || "Error al guardar");
+        let reason = "Error al guardar";
+        try {
+          const parsed = JSON.parse(message) as { error?: string; errors?: { formErrors?: string[] } };
+          if (parsed.error) {
+            reason = parsed.error;
+          } else if (parsed.errors?.formErrors?.length) {
+            reason = parsed.errors.formErrors.join(". ");
+          }
+        } catch {
+          if (message) {
+            reason = message;
+          }
+        }
+        throw new Error(reason);
       }
       setSuccess("Vehículo guardado correctamente");
       onSaved?.();
@@ -138,6 +165,12 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
+      {fallback && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          No hay conexión activa con la base de datos. Las ediciones se deshabilitan para evitar errores. Volvé a intentarlo cuando
+          Supabase esté disponible.
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <label className="flex flex-col text-sm font-medium text-slate-700">
           Título
@@ -146,6 +179,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.title}
             onChange={(event) => handleChange("title", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700">
@@ -155,6 +189,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.brand}
             onChange={(event) => handleChange("brand", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700">
@@ -164,6 +199,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.model}
             onChange={(event) => handleChange("model", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700">
@@ -174,6 +210,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.year ?? ""}
             onChange={(event) => handleNumberChange("year", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700">
@@ -183,6 +220,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.priceARS ?? ""}
             onChange={(event) => handleNumberChange("priceARS", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700">
@@ -192,6 +230,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.km ?? ""}
             onChange={(event) => handleNumberChange("km", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700">
@@ -200,6 +239,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.fuel ?? ""}
             onChange={(event) => handleChange("fuel", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700">
@@ -208,6 +248,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.gearbox ?? ""}
             onChange={(event) => handleChange("gearbox", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700 md:col-span-2">
@@ -216,6 +257,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.location ?? ""}
             onChange={(event) => handleChange("location", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700 md:col-span-2">
@@ -225,6 +267,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             onChange={(event) => handleChange("description", event.target.value)}
             rows={4}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-700 md:col-span-2">
@@ -234,6 +277,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             value={form.sellerId}
             onChange={(event) => handleChange("sellerId", event.target.value)}
             className="mt-1 rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+            disabled={fallback}
           >
             <option value="">Seleccionar vendedor</option>
             {sellers?.sellers.map((seller) => (
@@ -252,6 +296,12 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
             onUploaded={(urls) =>
               setForm((prev) => ({ ...prev, images: [...prev.images, ...urls] }))
             }
+            disabled={fallback || !storageEnabled}
+            disabledMessage={
+              fallback
+                ? "Modo demo: conecta DATABASE_URL para habilitar ediciones."
+                : "Configurá Supabase para habilitar la carga de imágenes."
+            }
           />
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {form.images.map((image) => (
@@ -266,6 +316,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
                       images: prev.images.filter((img) => img !== image),
                     }))
                   }
+                  disabled={fallback}
                 >
                   Quitar
                 </button>
@@ -281,6 +332,7 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
           onChange={(event) =>
             setForm((prev) => ({ ...prev, published: event.target.checked }))
           }
+          disabled={fallback}
         />
         Publicar este vehículo
       </label>
@@ -291,11 +343,11 @@ export function VehicleForm({ token, vehicle, onSaved }: VehicleFormProps) {
           type="button"
           className="btn-secondary"
           onClick={() => setForm(vehicle ? { ...vehicle } : createEmptyVehicle())}
-          disabled={loading}
+          disabled={loading || fallback}
         >
           Restablecer
         </button>
-        <button type="submit" className="btn-primary" disabled={loading}>
+        <button type="submit" className="btn-primary" disabled={loading || fallback}>
           {loading ? "Guardando..." : isEditing ? "Actualizar" : "Crear vehículo"}
         </button>
       </div>
