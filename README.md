@@ -11,7 +11,7 @@ Landing responsive con catálogo de vehículos usados, filtros básicos, detalle
 - Página de detalle por `slug` con metadatos SEO/OG.
 - Panel de alta/edición protegido por `ADMIN_TOKEN`, con subida de imágenes a Supabase Storage.
 - API REST (`/api/vehicles`, `/api/vehicles/[id]`, `/api/uploads`, `/api/admin/*`).
-- Seed inicial con vendedores y un vehículo de ejemplo.
+- Seed inicial con vendedores y placeholders seguros (sin datos reales).
 - Theming dinámico desde variables de entorno (`NEXT_PUBLIC_PRIMARY`, `NEXT_PUBLIC_SECONDARY`).
 
 ## 🗂️ Estructura principal
@@ -98,6 +98,18 @@ NEXT_PUBLIC_SITE_URL=
    ```
 
 La app queda disponible en `http://localhost:3000`.
+
+## 🚘 Cómo cargar autos
+
+> Si no configurás `DATABASE_URL`, la landing mostrará un catálogo de demostración **con placeholders** para que nadie confunda la demo con stock real. Una vez conectada la base de datos, toda la información vendrá de tu inventario real.
+
+1. **Ingresar al panel**: visitá `/admin`, introducí el `ADMIN_TOKEN` y guardalo. Si la base está conectada verás el dashboard con el listado actual.
+2. **Crear vendedores**: desde el panel, agregá los vendedores con nombre y teléfono (formato E.164). Son los contactos que aparecerán en las fichas.
+3. **Publicar vehículos**: completá marca, modelo, año, precio, kilometraje, descripción y subí las fotos. Elegí el vendedor y dejá marcada la opción “Publicado” para que aparezca en la landing.
+4. **Edición rápida**: en el mismo panel podés pausar (despublicar) o actualizar datos sin perder el histórico.
+5. **Carga vía API (opcional)**: enviá un `POST` a `/api/vehicles` con el token en el header `Authorization: Bearer ADMIN_TOKEN` y un body que cumpla con `vehicleInputSchema`. Ideal para integraciones externas.
+
+> Tip: ejecutá `pnpm seed` para crear un vendedor y un vehículo de ejemplo en tu propia base.
 
 ## 🗄️ Base de datos y Storage
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryUpdater } from "@/hooks/use-query-updater";
 
 interface PaginationProps {
   page: number;
@@ -8,24 +8,28 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, totalPages }: PaginationProps) {
-  const router = useRouter();
-  const params = useSearchParams();
+  const { updateSearchParams } = useQueryUpdater();
 
   const goTo = (newPage: number) => {
-    const search = new URLSearchParams(params.toString());
-    if (newPage <= 1) {
-      search.delete("page");
-    } else {
-      search.set("page", String(newPage));
-    }
-    const query = search.toString();
-    router.replace(query ? `?${query}` : "?");
+    // Aseguramos que el paginador nunca navegue fuera del rango válido.
+    const target = Math.min(Math.max(newPage, 1), totalPages);
+
+    updateSearchParams((search) => {
+      if (target <= 1) {
+        search.delete("page");
+      } else {
+        search.set("page", String(target));
+      }
+    });
   };
 
   if (totalPages <= 1) return null;
 
   return (
-    <nav className="flex items-center justify-between gap-3 text-sm">
+    <nav
+      className="flex items-center justify-between gap-3 text-sm"
+      aria-label="Paginación de resultados"
+    >
       <button
         type="button"
         onClick={() => goTo(page - 1)}
@@ -34,7 +38,7 @@ export function Pagination({ page, totalPages }: PaginationProps) {
       >
         Anterior
       </button>
-      <span className="text-slate-600">
+      <span className="text-slate-600" aria-live="polite">
         Página {page} de {totalPages}
       </span>
       <button
