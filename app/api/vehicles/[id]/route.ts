@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+
+import { getDb } from "@/lib/db";
+import { fetchVehicleById } from "@/lib/vehicle-repository";
 import { config } from "@/lib/config";
 import { slugify } from "@/lib/slug";
 import { vehicleInputSchema } from "@/lib/validators";
@@ -15,21 +17,32 @@ interface Params {
 }
 
 export async function GET(_request: Request, { params }: Params) {
-  const vehicle = await db.vehicle.findUnique({
-    where: { id: params.id },
-    include: { seller: true },
-  });
+  const result = await fetchVehicleById(params.id);
 
-  if (!vehicle) {
+  if (!result.vehicle) {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  return NextResponse.json(vehicle);
+  const response = NextResponse.json(result.vehicle);
+  if (result.fallback) {
+    response.headers.set("x-data-source", "fallback");
+  }
+  return response;
 }
 
 export async function PATCH(request: Request, { params }: Params) {
   if (!isAuthorized(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      {
+        error:
+          "No hay conexión a la base de datos. Configurá DATABASE_URL y volvemos a intentar.",
+      },
+      { status: 503 },
+    );
   }
 
   const json = await request.json();
@@ -41,45 +54,51 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const data = parsed.data;
 
-  const current = await db.vehicle.findUnique({ where: { id: params.id } });
-  if (!current) {
-    return new NextResponse("Not found", { status: 404 });
-  }
-
-  let slug = current.slug;
-  const slugSource = slugify(data.brand, data.model, data.year);
-  if (slugSource && slugSource !== current.slug) {
-    slug = slugSource;
-    let counter = 1;
-    while (
-      await db.vehicle.findFirst({
-        where: { slug, NOT: { id: params.id } },
-      })
-    ) {
-      slug = `${slugSource}-${counter++}`;
+  try {
+    const db = getDb();
+    const current = await db.vehicle.findUnique({ where: { id: params.id } });
+    if (!current) {
+      return new NextResponse("Not found", { status: 404 });
     }
+
+    let slug = current.slug;
+    const slugSource = slugify(data.brand, data.model, data.year);
+    if (slugSource && slugSource !== current.slug) {
+      slug = slugSource;
+      let counter = 1;
+      while (
+        await db.vehicle.findFirst({
+          where: { slug, NOT: { id: params.id } },
+        })
+      ) {
+        slug = `${slugSource}-${counter++}`;
+      }
+    }
+
+    const updated = await db.vehicle.update({
+      where: { id: params.id },
+      data: {
+        slug,
+        title: data.title,
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        priceARS: data.priceARS || null,
+        km: data.km || null,
+        fuel: data.fuel || null,
+        gearbox: data.gearbox || null,
+        location: data.location || null,
+        description: data.description || null,
+        images: data.images,
+        sellerId: data.sellerId,
+        published: data.published,
+      },
+      include: { seller: true },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Failed to update vehicle", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
-
-  const updated = await db.vehicle.update({
-    where: { id: params.id },
-    data: {
-      slug,
-      title: data.title,
-      brand: data.brand,
-      model: data.model,
-      year: data.year,
-      priceARS: data.priceARS || null,
-      km: data.km || null,
-      fuel: data.fuel || null,
-      gearbox: data.gearbox || null,
-      location: data.location || null,
-      description: data.description || null,
-      images: data.images,
-      sellerId: data.sellerId,
-      published: data.published,
-    },
-    include: { seller: true },
-  });
-
-  return NextResponse.json(updated);
 }
