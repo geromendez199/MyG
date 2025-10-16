@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryUpdater } from "@/hooks/use-query-updater";
 
 interface PaginationProps {
   page: number;
@@ -8,18 +8,19 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, totalPages }: PaginationProps) {
-  const router = useRouter();
-  const params = useSearchParams();
+  const { updateSearchParams } = useQueryUpdater();
 
   const goTo = (newPage: number) => {
-    const search = new URLSearchParams(params.toString());
-    if (newPage <= 1) {
-      search.delete("page");
-    } else {
-      search.set("page", String(newPage));
-    }
-    const query = search.toString();
-    router.replace(query ? `?${query}` : "?");
+    // Aseguramos que el paginador nunca navegue fuera del rango válido.
+    const target = Math.min(Math.max(newPage, 1), totalPages);
+
+    updateSearchParams((search) => {
+      if (target <= 1) {
+        search.delete("page");
+      } else {
+        search.set("page", String(target));
+      }
+    });
   };
 
   if (totalPages <= 1) return null;

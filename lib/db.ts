@@ -5,8 +5,24 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-export const db = global.prisma || new PrismaClient();
+function createClient() {
+  return new PrismaClient();
+}
 
-if (process.env.NODE_ENV !== "production") {
-  global.prisma = db;
+export function getDb() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is not configured");
+  }
+
+  if (global.prisma) {
+    return global.prisma;
+  }
+
+  const client = createClient();
+
+  if (process.env.NODE_ENV !== "production") {
+    global.prisma = client;
+  }
+
+  return client;
 }
