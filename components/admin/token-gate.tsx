@@ -5,7 +5,11 @@ import { AdminDashboard } from "./dashboard";
 
 const STORAGE_KEY = "mg-admin-token";
 
-export function TokenGate() {
+interface TokenGateProps {
+  storageEnabled: boolean;
+}
+
+export function TokenGate({ storageEnabled }: TokenGateProps) {
   const [token, setToken] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +47,7 @@ export function TokenGate() {
   };
 
   if (token) {
-    return <AdminDashboard token={token} />;
+    return <AdminDashboard token={token} storageEnabled={storageEnabled} />;
   }
 
   return (
