@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChatBubbleLeftRightIcon, MapPinIcon } from "@heroicons/react/24/outline";
 
+import { type VehicleWithSeller } from "@/lib/types";
 import { formatCurrency, formatKm } from "@/lib/format";
 import { waHref } from "@/lib/whatsapp";
-import type { VehicleWithSeller } from "@/lib/types";
 
 type Props = {
   vehicle: VehicleWithSeller;
@@ -38,12 +38,9 @@ export function VehicleCard({ vehicle }: Props) {
           </div>
         )}
       </div>
-
       <div className="flex flex-1 flex-col gap-3 p-6">
         <header className="space-y-1">
-          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-primary">
-            {vehicle.title}
-          </h3>
+          <h3 className="text-lg font-semibold text-slate-900 group-hover:text-primary">{vehicle.title}</h3>
           <p className="text-sm text-slate-500">
             {formatKm(vehicle.km)} · {vehicle.fuel ?? "-"}
           </p>
@@ -53,25 +50,24 @@ export function VehicleCard({ vehicle }: Props) {
           <MapPinIcon className="h-4 w-4" />
           {vehicle.location ?? "Sin ubicación"}
         </p>
-
-        <p className="text-2xl font-bold text-slate-900">
-          {formatCurrency(vehicle.priceARS)}
-        </p>
-
+        <p className="text-2xl font-bold text-slate-900">{formatCurrency(vehicle.priceARS)}</p>
         {vehicle.description && (
           <p className="line-clamp-3 text-sm text-slate-600">{vehicle.description}</p>
         )}
-
         <div className="mt-auto grid gap-2 pt-4 sm:grid-cols-2">
-          <Link href={`/vehicle/${vehicle.slug}`} prefetch={false} className="btn-secondary text-center">
+          <Link
+            href={`/vehicle/${vehicle.slug}`}
+            prefetch={false}
+            className="btn-secondary text-center"
+          >
             Ver detalles
           </Link>
-
           <a
             href={waHref(vehicle.seller.phoneE164, message)}
             className="btn-primary text-center"
             target="_blank"
             rel="noopener noreferrer"
+            // Ancla externa para evitar que Next intente prefetch cross-origin.
           >
             <ChatBubbleLeftRightIcon className="h-5 w-5" />
             Consultar
