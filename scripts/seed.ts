@@ -11,7 +11,8 @@ async function main() {
     where: { phoneE164: process.env.SELLER_MARTIN_PHONE },
     update: {},
     create: {
-      name: "Martin",
+      // Persistimos el nombre completo para que coincida con el catálogo público.
+      name: "Martin Alloatti",
       phoneE164: process.env.SELLER_MARTIN_PHONE,
       waPreset: "Hola! Vi el auto publicado y quiero más info.",
     },
@@ -20,10 +21,10 @@ async function main() {
   const owner = await db.seller.upsert({
     where: { phoneE164: process.env.SELLER_OWNER_PHONE },
     update: {
-      name: process.env.SELLER_OWNER_NAME ?? "Vendedor",
+      name: process.env.SELLER_OWNER_NAME ?? "Gerónimo Mendez",
     },
     create: {
-      name: process.env.SELLER_OWNER_NAME ?? "Vendedor",
+      name: process.env.SELLER_OWNER_NAME ?? "Gerónimo Mendez",
       phoneE164: process.env.SELLER_OWNER_PHONE,
     },
   });
