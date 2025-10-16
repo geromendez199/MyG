@@ -1,8 +1,16 @@
 import type { Prisma } from "@prisma/client";
 
 import { getDb } from "@/lib/db";
-import type { VehicleFilters } from "@/lib/validators";
-import { SAMPLE_VEHICLES, type VehicleWithSeller } from "./sample-data";
+import type { SellerProfile, VehicleWithSeller } from "@/lib/types";
+import { vehicleFiltersSchema, type VehicleFilters } from "@/lib/validators";
+import {
+  SAMPLE_VEHICLES,
+  SAMPLE_SELLERS,
+  findSampleVehicleById,
+  findSampleVehicleBySlug,
+} from "./sample-data";
+
+const EMPTY_FILTERS = Object.freeze(vehicleFiltersSchema.parse({})); // Defaults reutilizables para queries utilitarias.
 
 interface QueryOptions {
   includeDrafts?: boolean;
@@ -108,7 +116,7 @@ export async function fetchVehicles(
     ]);
 
     return {
-      items,
+      items: items as VehicleWithSeller[],
       total,
       totalPages: Math.max(1, Math.ceil(total / filters.perPage)),
       page: filters.page,
@@ -148,13 +156,13 @@ export async function fetchVehicleBySlug(slug: string): Promise<SingleResult> {
     });
 
     return {
-      vehicle,
+      vehicle: (vehicle ?? null) as VehicleWithSeller | null,
       fallback: false,
     };
   } catch (error) {
     console.warn(`Falling back to sample vehicle for slug "${slug}" due to database error`, error);
-    const vehicle =
-      SAMPLE_VEHICLES.find((item) => item.slug === slug && item.published) ?? null;
+    const sample = findSampleVehicleBySlug(slug);
+    const vehicle = sample && sample.published ? sample : null;
 
     return {
       vehicle,
@@ -176,16 +184,62 @@ export async function fetchVehicleById(id: string): Promise<SingleResult> {
     });
 
     return {
-      vehicle,
+      vehicle: (vehicle ?? null) as VehicleWithSeller | null,
       fallback: false,
     };
   } catch (error) {
     console.warn(`Falling back to sample vehicle for id "${id}" due to database error`, error);
-    const vehicle = SAMPLE_VEHICLES.find((item) => item.id === id) ?? null;
+    const vehicle = findSampleVehicleById(id);
 
     return {
       vehicle,
       fallback: true,
     };
+  }
+}
+
+export async function fetchActiveSellers(): Promise<{ sellers: SellerProfile[]; fallback: boolean }> {
+  try {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is not configured");
+    }
+
+    const db = getDb();
+    const sellers = await db.seller.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+    });
+
+    return { sellers: sellers as SellerProfile[], fallback: false };
+  } catch (error) {
+    console.warn("Falling back to sample sellers due to database error", error);
+    return { sellers: SAMPLE_SELLERS as SellerProfile[], fallback: true };
+  }
+}
+
+export async function fetchAllVehicles(options: QueryOptions = {}) {
+  // Generamos listados completos (sitemap / feeds) sin repetir queries según cantidad de páginas.
+  const includeDrafts = options.includeDrafts ?? false;
+
+  try {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is not configured");
+    }
+
+    const db = getDb();
+    const where = buildWhere(EMPTY_FILTERS, includeDrafts);
+    const vehicles = await db.vehicle.findMany({
+      where,
+      include: { seller: true },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    return { vehicles: vehicles as VehicleWithSeller[], fallback: false };
+  } catch (error) {
+    console.warn("Falling back to sample vehicles for sitemap", error);
+    const vehicles = includeDrafts
+      ? [...SAMPLE_VEHICLES]
+      : SAMPLE_VEHICLES.filter((vehicle) => vehicle.published);
+    return { vehicles, fallback: true };
   }
 }

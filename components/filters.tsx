@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+
+import { useQueryUpdater } from "@/hooks/use-query-updater";
 
 interface FiltersProps {
   className?: string;
@@ -9,14 +11,9 @@ interface FiltersProps {
 
 const brands = ["Ford", "Chevrolet", "Toyota", "Volkswagen", "Renault", "Peugeot", "Fiat"];
 
-const buildUrl = (query: string) => {
-  const basePath = typeof window !== "undefined" ? window.location.pathname : "/";
-  return query ? `?${query}` : basePath;
-};
-
 export function Filters({ className = "" }: FiltersProps) {
   const params = useSearchParams();
-  const router = useRouter();
+  const { updateSearchParams, isPending } = useQueryUpdater();
 
   const values = useMemo(
     () => ({
@@ -36,38 +33,50 @@ export function Filters({ className = "" }: FiltersProps) {
   );
 
   const updateParam = (key: string, value: string) => {
-    const newParams = new URLSearchParams(params.toString());
-    if (value) {
-      newParams.set(key, value);
-    } else {
-      newParams.delete(key);
-    }
-    newParams.delete("page");
-    const query = newParams.toString();
-    router.replace(buildUrl(query));
+    updateSearchParams((search) => {
+      if (value) {
+        search.set(key, value);
+      } else {
+        search.delete(key);
+      }
+      // Cada cambio reinicia la paginación para evitar páginas vacías.
+      search.delete("page");
+    });
   };
 
   const clearFilters = () => {
-    const keepSearch = values.q.trim();
-    const newParams = new URLSearchParams();
-    if (keepSearch) {
-      newParams.set("q", keepSearch);
-    }
-    router.replace(buildUrl(newParams.toString()));
+    updateSearchParams((search) => {
+      const keepSearch = values.q.trim();
+      // clear() no está disponible en todos los entornos, borramos manualmente.
+      Array.from(search.keys()).forEach((key) => search.delete(key));
+      if (keepSearch) {
+        search.set("q", keepSearch);
+      }
+    });
   };
 
   return (
-    <form className={`space-y-6 ${className}`}>
+    // aria-busy avisa a lectores de pantalla que la búsqueda está recalculando resultados.
+    <form className={`space-y-6 ${className}`} aria-busy={isPending}>
       <div className="space-y-2">
         <label className="text-sm font-semibold text-slate-600" htmlFor="filter-search">
           Buscar por palabra clave
         </label>
         <input
           id="filter-search"
+          type="search"
+          enterKeyHint="search"
           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           placeholder="Marca, modelo o característica"
           defaultValue={values.q}
           onBlur={(event) => updateParam("q", event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              // Aplicamos filtros inmediatamente al presionar Enter para mejorar la UX con teclado.
+              updateParam("q", (event.currentTarget as HTMLInputElement).value);
+            }
+          }}
+          aria-controls="inventario"
         />
         <p className="text-xs text-slate-400">
           Escribí el modelo, versión o detalle que te interese. Actualizamos el listado automáticamente.
@@ -105,6 +114,7 @@ export function Filters({ className = "" }: FiltersProps) {
             <input
               type="number"
               min={1900}
+              inputMode="numeric"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               defaultValue={values.yearMin}
               onBlur={(event) => updateParam("yearMin", event.target.value)}
@@ -115,6 +125,7 @@ export function Filters({ className = "" }: FiltersProps) {
             <input
               type="number"
               min={1900}
+              inputMode="numeric"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               defaultValue={values.yearMax}
               onBlur={(event) => updateParam("yearMax", event.target.value)}
@@ -131,6 +142,7 @@ export function Filters({ className = "" }: FiltersProps) {
             <input
               type="number"
               min={0}
+              inputMode="numeric"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               defaultValue={values.priceMin}
               onBlur={(event) => updateParam("priceMin", event.target.value)}
@@ -141,6 +153,7 @@ export function Filters({ className = "" }: FiltersProps) {
             <input
               type="number"
               min={0}
+              inputMode="numeric"
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               defaultValue={values.priceMax}
               onBlur={(event) => updateParam("priceMax", event.target.value)}
