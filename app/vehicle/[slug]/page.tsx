@@ -7,47 +7,53 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { cache } from "react";
+
 import { config } from "@/lib/config";
 import { fetchVehicleBySlug } from "@/lib/vehicle-repository";
 import { formatCurrency, formatKm } from "@/lib/format";
 import { waHref } from "@/lib/whatsapp";
+import { buildCanonicalUrl, buildVehicleJsonLd } from "@/lib/seo";
 
 interface PageProps {
   params: { slug: string };
 }
 
-type VehicleWithSeller = Prisma.VehicleGetPayload<{
-  include: { seller: true };
-}>;
+const getVehicleBySlug = cache(fetchVehicleBySlug); // cache() evita pedir dos veces el mismo vehículo (metadata + página).
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { vehicle } = await fetchVehicleBySlug(params.slug);
-
-    if (!vehicle) {
-      return { title: "Vehículo no encontrado" };
-    }
-
-    const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
-    const description = vehicle.description || config.seo.description;
-    const image = vehicle.images[0];
-
-    return {
-      title,
-      description,
-      openGraph: {
-        title,
-        description,
-        images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
-      },
-    };
-  } catch (error) {
+  const result = await getVehicleBySlug(params.slug).catch((error) => {
     console.error("Failed to load vehicle metadata", error);
+    return { vehicle: null };
+  });
+
+  const vehicle = result?.vehicle;
+
+  if (!vehicle) {
     return { title: "Vehículo no disponible" };
   }
+
+  const title = `${vehicle.title} ${vehicle.year} | MG Automotores`;
+  const description = vehicle.description || config.seo.description;
+  const image = vehicle.images[0];
+  const canonical = buildCanonicalUrl(`/vehicle/${vehicle.slug}`);
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      images: image ? [{ url: image, width: 1200, height: 630 }] : undefined,
+      type: "article",
+    },
+  } satisfies Metadata;
 }
 
 export default async function VehicleDetailPage({ params }: PageProps) {
-  const { vehicle, fallback } = await fetchVehicleBySlug(params.slug);
+  const { vehicle, fallback } = await getVehicleBySlug(params.slug);
 
   if (!vehicle) {
     notFound();
@@ -55,6 +61,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
 
   const cover = vehicle.images[0];
   const message = `Hola! Me interesa el ${vehicle.title} (${vehicle.year}). ¿Sigue disponible?`;
+  const vehicleJsonLd = buildVehicleJsonLd(vehicle); // JSON-LD dedicado para reforzar SEO orgánico.
 
   return (
     <div className="mx-auto max-w-5xl space-y-12 px-4 py-12">
@@ -63,10 +70,16 @@ export default async function VehicleDetailPage({ params }: PageProps) {
       </a>
       {fallback ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Estás viendo una ficha de demostración. Configurá la base de datos para cargar tus vehículos reales y actualizar este detalle.
+          Estás viendo una ficha de demostración mientras terminamos de cargar los datos oficiales. Escribinos y te
+          acompañamos en el proceso de publicación o búsqueda de tu vehículo ideal.
         </div>
       ) : null}
       <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <script
+          type="application/ld+json"
+          // JSON-LD inline para SEO del detalle. Evitamos recrearlo en cliente.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(vehicleJsonLd) }}
+        />
         {cover && (
           <div className="relative h-96 w-full overflow-hidden">
             <Image src={cover} alt={vehicle.title} fill className="object-cover" priority />

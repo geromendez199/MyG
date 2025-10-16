@@ -1,8 +1,25 @@
 import { config } from "@/lib/config";
+import type { SellerProfile } from "@/lib/types";
 
-export function Hero() {
+type HeroProps = {
+  sellers: SellerProfile[];
+};
+
+export function Hero({ sellers }: HeroProps) {
   const phone = config.contacts.ownerPhone;
   const phoneHref = phone ? `https://wa.me/${phone.replace(/[^0-9]/g, "")}` : undefined;
+  // Mostramos asesores reales para que el cliente identifique quién lo acompañará.
+  const advisors = sellers.filter((seller) => seller.active);
+  const advisorNames = advisors.length
+    ? advisors.map((seller) => seller.name).join(" y ")
+    : config.contacts.ownerName;
+  const highlightMessages = [
+    "Coordinamos tasación, financiamiento y documentación por vos.",
+    advisors.length
+      ? `Tu contacto directo: ${advisorNames}.`
+      : "Contactá a nuestro equipo y te acompañamos en cada paso.",
+    "Publicamos nuevas unidades todas las semanas.",
+  ];
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-white px-6 py-16 shadow-xl ring-1 ring-slate-100 md:px-10">
@@ -17,7 +34,7 @@ export function Hero() {
             Encontrá el auto ideal, con asesoramiento directo del vendedor
           </h1>
           <p className="text-lg text-slate-600">
-            Vehículos seleccionados, historial claro y contacto inmediato por WhatsApp. Cargamos unidades nuevas todas las semanas para que consigas tu próximo auto sin complicaciones.
+            Vehículos seleccionados, historial claro y contacto inmediato por WhatsApp. Nuestro equipo carga cada unidad de manera personalizada para ofrecerte información confiable.
           </p>
           <div className="flex flex-col items-start gap-3 sm:flex-row">
             <a href="#inventario" className="btn-primary">
@@ -49,21 +66,16 @@ export function Hero() {
           <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white/90 p-6 shadow-2xl">
             <p className="text-sm font-semibold uppercase tracking-wide text-primary">Unidades destacadas</p>
             <ul className="mt-4 space-y-4 text-sm text-slate-600">
-              <li>
-                <p className="font-semibold text-slate-900">Chevrolet Cruze 1.4T Premier AT</p>
-                <p>2019 · 45.000 km · $ 14.900.000</p>
-              </li>
-              <li>
-                <p className="font-semibold text-slate-900">Toyota Hilux SRV 4x4</p>
-                <p>2020 · 32.000 km · $ 32.500.000</p>
-              </li>
-              <li>
-                <p className="font-semibold text-slate-900">Peugeot 208 Allure Tiptronic</p>
-                <p>2021 · 18.000 km · $ 13.200.000</p>
-              </li>
+              {/* Recordamos a los administradores que la demo no representa stock real. */}
+              {highlightMessages.map((message, index) => (
+                <li key={message}>
+                  <p className="font-semibold text-slate-900">Unidad demo #{index + 1}</p>
+                  <p>{message}</p>
+                </li>
+              ))}
             </ul>
             <p className="mt-6 rounded-2xl bg-primary/5 px-4 py-3 text-xs text-slate-500">
-              * Valores de referencia. Consultá disponibilidad real en el listado actualizado.
+              * Cuando listas tu vehículo nos encargamos de subir la información real en Supabase.
             </p>
           </div>
         </div>

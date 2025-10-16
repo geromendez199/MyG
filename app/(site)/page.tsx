@@ -1,17 +1,19 @@
 import "server-only";
-import React from "react";
+import { Suspense, cache } from "react";
 
 import { Hero } from "@/components/hero";
 import { Filters } from "@/components/filters";
 import { Pagination } from "@/components/pagination";
 import { VehicleCard } from "@/components/vehicle-card";
-import { fetchVehicles } from "@/lib/vehicle-repository";
+import { config } from "@/lib/config";
+import { fetchActiveSellers, fetchVehicles } from "@/lib/vehicle-repository";
 import { vehicleFiltersSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function getVehicles(
+// cache() reutiliza el resultado entre metadata y contenido cuando la request comparte searchParams.
+const getVehicles = cache(async function getVehicles(
   searchParams: Record<string, string | string[] | undefined>,
 ) {
   const normalized = Object.fromEntries(
@@ -20,9 +22,11 @@ async function getVehicles(
 
   const parsed = vehicleFiltersSchema.safeParse(normalized);
   const filters = parsed.success ? parsed.data : vehicleFiltersSchema.parse({});
-
+  // Al cachear evitamos recalcular la misma combinación de filtros dentro del render del servidor.
   return fetchVehicles(filters);
-}
+});
+
+const getActiveSellers = cache(fetchActiveSellers);
 
 async function VehiclesSection({
   searchParams,
@@ -45,9 +49,12 @@ async function VehiclesSection({
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         {fallback ? (
-          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Estamos mostrando un catálogo de demostración porque no pudimos conectarnos a la base de datos. Configurá la
-            variable <code>DATABASE_URL</code> y ejecutá las migraciones para ver tus vehículos reales.
+          <div
+            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
+            role="status"
+          >
+            Estamos mostrando un catálogo de demostración mientras preparamos nuevas unidades. Escribinos por WhatsApp y te
+            avisamos ni bien esté disponible el vehículo que buscás.
           </div>
         ) : null}
         <header className="flex flex-col gap-3 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
@@ -65,24 +72,39 @@ async function VehiclesSection({
           ))}
         </div>
         <div className="mt-8">
-          <React.Suspense fallback={<div className="flex justify-center py-6 text-sm text-slate-500">Cargando paginación...</div>}>
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-6 text-sm text-slate-500" role="status">
+                Cargando paginación...
+              </div>
+            }
+          >
             <Pagination page={page} totalPages={totalPages} />
-          </React.Suspense>
+          </Suspense>
         </div>
       </section>
     </div>
   );
 }
 
-export default function SitePage({
+export default async function SitePage({
   searchParams,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
 }) {
+  const { sellers } = await getActiveSellers();
+  const ownerPhone = config.contacts.ownerPhone;
+  const ownerName = config.contacts.ownerName;
+  const phoneHref = ownerPhone ? `https://wa.me/${ownerPhone.replace(/[^0-9]/g, "")}` : undefined;
+  const sellerNames = sellers.map((seller) => seller.name).filter(Boolean);
+  // ListFormat genera textos naturales ("Martin y Gerónimo") sin hardcodear conjunciones.
+  const sellerListFormatter = new Intl.ListFormat("es", { style: "long", type: "conjunction" });
+  const sellerNamesLabel = sellerNames.length ? sellerListFormatter.format(sellerNames) : ownerName;
+
   return (
     <div className="space-y-16">
       <div className="mx-auto w-full max-w-6xl px-4 pt-12">
-        <Hero />
+        <Hero sellers={sellers} />
       </div>
       <div className="mx-auto w-full max-w-6xl px-4">
         <section className="grid gap-8 lg:grid-cols-[320px,1fr]">
@@ -100,13 +122,23 @@ export default function SitePage({
               <p className="mt-4 text-xs uppercase tracking-[0.3em] text-slate-400">Atención de lunes a sábado</p>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-slate-900">¿Cómo publico mis autos?</h3>
+              <h3 className="text-lg font-semibold text-slate-900">¿Querés vender tu auto?</h3>
               <p className="mt-2 text-sm text-slate-600">
-                Ingresá al panel de administración con tu token, cargá fotos, precio y vendedor, y publicá en un clic.
+                {sellerNames.length > 0 ? (
+                  <>Contactá a {sellerNamesLabel} y nosotros cargamos la publicación en Supabase por vos.</>
+                ) : (
+                  <>Hablá con nuestro equipo comercial y gestionamos la publicación en tu nombre.</>
+                )}
               </p>
-              <a className="btn-secondary mt-4 w-full" href="/admin">
-                Ir al panel administrativo
-              </a>
+              {phoneHref ? (
+                <a className="btn-secondary mt-4 w-full" href={phoneHref} target="_blank" rel="noopener noreferrer">
+                  Escribir a {ownerName}
+                </a>
+              ) : null}
+              <p className="mt-4 text-xs text-slate-400">
+                {/* Este texto aclara la operatoria interna para el cliente final. */}
+                Coordinamos todo el proceso para que tus datos se publiquen con seguridad y sin errores.
+              </p>
             </div>
           </aside>
           <VehiclesSection searchParams={searchParams} />

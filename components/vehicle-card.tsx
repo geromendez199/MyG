@@ -6,7 +6,9 @@ import { Seller, Vehicle } from "@prisma/client";
 import { formatCurrency, formatKm } from "@/lib/format";
 import { waHref } from "@/lib/whatsapp";
 
-export type VehicleWithSeller = Vehicle & { seller: Seller };
+import type { VehicleWithSeller } from "@/lib/types";
+import { formatCurrency, formatKm } from "@/lib/format";
+import { waHref } from "@/lib/whatsapp";
 
 type Props = {
   vehicle: VehicleWithSeller;
@@ -56,18 +58,23 @@ export function VehicleCard({ vehicle }: Props) {
           <p className="line-clamp-3 text-sm text-slate-600">{vehicle.description}</p>
         )}
         <div className="mt-auto grid gap-2 pt-4 sm:grid-cols-2">
-          <Link href={`/vehicle/${vehicle.slug}`} className="btn-secondary text-center">
+          <Link
+            href={`/vehicle/${vehicle.slug}`}
+            prefetch={false}
+            className="btn-secondary text-center"
+          >
             Ver detalles
           </Link>
-          <Link
+          <a
             href={waHref(vehicle.seller.phoneE164, message)}
             className="btn-primary text-center"
             target="_blank"
             rel="noopener noreferrer"
+            // Ancla externa para evitar que Next intente prefetch cross-origin.
           >
             <ChatBubbleLeftRightIcon className="h-5 w-5" />
             Consultar
-          </Link>
+          </a>
         </div>
       </div>
     </article>
