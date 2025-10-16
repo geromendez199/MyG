@@ -35,9 +35,10 @@ const fetcher = (url: string, token: string) =>
 
 interface AdminDashboardProps {
   token: string;
+  storageEnabled: boolean;
 }
 
-export function AdminDashboard({ token }: AdminDashboardProps) {
+export function AdminDashboard({ token, storageEnabled }: AdminDashboardProps) {
   const { data, isLoading, error, mutate } = useSWR<VehicleResponse>(
     token ? ["/api/vehicles?includeDrafts=true&perPage=100", token] : null,
     (args: [string, string]) => fetcher(args[0], args[1]),
@@ -117,6 +118,7 @@ export function AdminDashboard({ token }: AdminDashboardProps) {
             void mutate();
           }}
           fallback={fallback}
+          storageEnabled={storageEnabled}
         />
       </main>
     </div>

@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
 import { config } from "@/lib/config";
-import { supabaseAdmin } from "@/lib/supabase";
+import env, { flags } from "@/lib/env";
+import { supabaseServiceClient } from "@/lib/supabase";
 
 function isAuthorized(request: Request) {
   const token = request.headers.get("authorization");
@@ -8,31 +10,23 @@ function isAuthorized(request: Request) {
   return token === `Bearer ${config.adminToken}`;
 }
 
-// We rely on Supabase's Node client to upload binary payloads. The storage
-// helpers are not fully compatible with the Edge runtime, so we explicitly use
-// the Node runtime to avoid subtle "unsupported platform" errors in production.
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  // When Supabase credentials are missing we want to fail fast with a
-  // descriptive message rather than throwing and returning a generic 500.
-  const { url, serviceRole, bucket } = config.supabase;
-  if (!url || !serviceRole || !bucket) {
+  if (!flags.hasStorage) {
     return NextResponse.json(
-      {
-        error:
-          "Supabase no está configurado. Definí NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE y SUPABASE_BUCKET para habilitar las cargas.",
-      },
-      { status: 503 },
+      { error: "Supabase Storage no configurado. Falta URL/keys/bucket." },
+      { status: 400 },
     );
   }
 
   const formData = await request.formData();
   const file = formData.get("file");
+  const prefix = (formData.get("prefix") as string | null) ?? "";
 
   if (!(file instanceof File)) {
     return new NextResponse("Archivo inválido", { status: 400 });
@@ -48,16 +42,23 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = supabaseAdmin();
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${crypto.randomUUID()}.${ext}`;
+    const supabase = supabaseServiceClient();
+    // Sanitizamos prefijos/nombres para evitar path traversal y caracteres inválidos en Supabase Storage.
+    const safePrefix = prefix
+      ? prefix
+          .replace(/\.\./g, "")
+          .replace(/^\/*/, "")
+          .replace(/[^a-zA-Z0-9/_-]/g, "")
+      : "";
+    const normalizedPrefix = safePrefix ? `${safePrefix.replace(/\/*$/, "")}/` : "";
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "");
+    const path = `${normalizedPrefix}${Date.now()}-${sanitizedName}`.replace(/\/+/g, "/");
+    const bytes = new Uint8Array(await file.arrayBuffer());
 
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, await file.arrayBuffer(), {
-        contentType: file.type,
-        upsert: false,
-      });
+    const { data, error } = await supabase.storage.from(env.SUPABASE_BUCKET).upload(path, bytes, {
+      contentType: file.type,
+      upsert: true,
+    });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 502 });
@@ -65,9 +66,9 @@ export async function POST(request: Request) {
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    } = supabase.storage.from(env.SUPABASE_BUCKET).getPublicUrl(data.path);
 
-    return NextResponse.json({ url: publicUrl });
+    return NextResponse.json({ url: publicUrl, path: data.path });
   } catch (error) {
     console.error("Supabase upload failed", error);
     return NextResponse.json(

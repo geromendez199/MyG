@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
 import { getDb } from "@/lib/db";
+import { fallback as isFallbackMode, flags } from "@/lib/env";
 import type { SellerProfile, VehicleWithSeller } from "@/lib/types";
 import { vehicleFiltersSchema, type VehicleFilters } from "@/lib/validators";
 import {
@@ -96,11 +97,25 @@ export async function fetchVehicles(
   const skip = (filters.page - 1) * filters.perPage;
   const take = filters.perPage;
 
-  try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is not configured");
-    }
+  // Cuando falta DATABASE_URL servimos los datos de demostración sin golpear Prisma.
+  if (isFallbackMode || !flags.hasDB) {
+    const filtered = applySampleFilters(filters, includeDrafts).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+    const total = filtered.length;
+    const paginated = filtered.slice(skip, skip + take);
 
+    return {
+      items: paginated,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / filters.perPage)),
+      page: filters.page,
+      perPage: filters.perPage,
+      fallback: true,
+    };
+  }
+
+  try {
     const db = getDb();
     const where = buildWhere(filters, includeDrafts);
 
@@ -144,11 +159,18 @@ export async function fetchVehicles(
 }
 
 export async function fetchVehicleBySlug(slug: string): Promise<SingleResult> {
-  try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is not configured");
-    }
+  // Idem para búsquedas individuales: retornamos muestras sin generar excepciones.
+  if (isFallbackMode || !flags.hasDB) {
+    const sample = findSampleVehicleBySlug(slug);
+    const vehicle = sample && sample.published ? sample : null;
 
+    return {
+      vehicle,
+      fallback: true,
+    };
+  }
+
+  try {
     const db = getDb();
     const vehicle = await db.vehicle.findUnique({
       where: { slug },
@@ -172,11 +194,16 @@ export async function fetchVehicleBySlug(slug: string): Promise<SingleResult> {
 }
 
 export async function fetchVehicleById(id: string): Promise<SingleResult> {
-  try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is not configured");
-    }
+  if (isFallbackMode || !flags.hasDB) {
+    const vehicle = findSampleVehicleById(id);
 
+    return {
+      vehicle,
+      fallback: true,
+    };
+  }
+
+  try {
     const db = getDb();
     const vehicle = await db.vehicle.findUnique({
       where: { id },
@@ -199,11 +226,12 @@ export async function fetchVehicleById(id: string): Promise<SingleResult> {
 }
 
 export async function fetchActiveSellers(): Promise<{ sellers: SellerProfile[]; fallback: boolean }> {
-  try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is not configured");
-    }
+  if (isFallbackMode || !flags.hasDB) {
+    // En demo devolvemos los vendedores conocidos para que el panel muestre contactos válidos.
+    return { sellers: SAMPLE_SELLERS as SellerProfile[], fallback: true };
+  }
 
+  try {
     const db = getDb();
     const sellers = await db.seller.findMany({
       where: { active: true },
@@ -221,11 +249,16 @@ export async function fetchAllVehicles(options: QueryOptions = {}) {
   // Generamos listados completos (sitemap / feeds) sin repetir queries según cantidad de páginas.
   const includeDrafts = options.includeDrafts ?? false;
 
-  try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("DATABASE_URL is not configured");
-    }
+  if (isFallbackMode || !flags.hasDB) {
+    // Los listados globales (sitemap/feed) también salen del dataset de demo en modo fallback.
+    const vehicles = includeDrafts
+      ? [...SAMPLE_VEHICLES]
+      : SAMPLE_VEHICLES.filter((vehicle) => vehicle.published);
 
+    return { vehicles, fallback: true };
+  }
+
+  try {
     const db = getDb();
     const where = buildWhere(EMPTY_FILTERS, includeDrafts);
     const vehicles = await db.vehicle.findMany({

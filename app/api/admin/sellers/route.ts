@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
 import { SAMPLE_SELLERS } from "@/lib/sample-data";
+import { getDb } from "@/lib/db";
+import { fallback as isFallbackMode, flags } from "@/lib/env";
 
 function isAuthorized(request: Request) {
   const token = request.headers.get("authorization");
@@ -14,6 +15,10 @@ export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     // En build o sin token, devolver vacío para evitar error
     return NextResponse.json({ sellers: [] });
+  }
+
+  if (isFallbackMode || !flags.hasDB) {
+    return NextResponse.json({ sellers: SAMPLE_SELLERS, fallback: true });
   }
 
   try {

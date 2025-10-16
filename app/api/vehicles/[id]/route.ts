@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/lib/db";
 import { fetchVehicleById } from "@/lib/vehicle-repository";
 import { config } from "@/lib/config";
 import { slugify } from "@/lib/slug";
 import { vehicleInputSchema } from "@/lib/validators";
+import { getDb } from "@/lib/db";
+import { fallback as isFallbackMode, flags } from "@/lib/env";
 
 function isAuthorized(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -35,13 +36,12 @@ export async function PATCH(request: Request, { params }: Params) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  if (!process.env.DATABASE_URL) {
+  if (isFallbackMode || !flags.hasDB) {
     return NextResponse.json(
       {
-        error:
-          "No hay conexión a la base de datos. Configurá DATABASE_URL y volvemos a intentar.",
+        error: "Demo mode: sin conexión a base de datos",
       },
-      { status: 503 },
+      { status: 403 },
     );
   }
 

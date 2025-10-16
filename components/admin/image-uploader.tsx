@@ -6,9 +6,10 @@ interface ImageUploaderProps {
   token: string;
   onUploaded: (urls: string[]) => void;
   disabled?: boolean;
+  disabledMessage?: string;
 }
 
-export function ImageUploader({ token, onUploaded, disabled = false }: ImageUploaderProps) {
+export function ImageUploader({ token, onUploaded, disabled = false, disabledMessage }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +94,7 @@ export function ImageUploader({ token, onUploaded, disabled = false }: ImageUplo
         }}
       >
         {disabled
-          ? "Configurá Supabase para habilitar la carga de imágenes."
+          ? disabledMessage ?? "Configurá Supabase para habilitar la carga de imágenes."
           : loading
             ? "Subiendo imágenes..."
             : "Formatos admitidos: JPG, PNG. Máx 5MB."}

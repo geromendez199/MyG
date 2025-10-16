@@ -7,6 +7,10 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "diag": "ts-node --transpile-only scripts/diagnose.ts",
+    "test:upload": "ts-node --transpile-only scripts/test-upload.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "seed": "tsx scripts/seed.ts"
@@ -33,6 +37,7 @@
     "postcss": "^8.5.6",
     "prettier": "^3.2.4",
     "tailwindcss": "^3.4.18",
+    "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }

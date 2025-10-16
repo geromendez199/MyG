@@ -41,6 +41,7 @@ interface VehicleFormProps {
   vehicle?: AdminVehicle;
   onSaved?: () => void;
   fallback?: boolean;
+  storageEnabled?: boolean;
 }
 
 const createEmptyVehicle = (): AdminVehicle => ({
@@ -59,7 +60,13 @@ const createEmptyVehicle = (): AdminVehicle => ({
   published: true,
 });
 
-export function VehicleForm({ token, vehicle, onSaved, fallback = false }: VehicleFormProps) {
+export function VehicleForm({
+  token,
+  vehicle,
+  onSaved,
+  fallback = false,
+  storageEnabled = true,
+}: VehicleFormProps) {
   const [form, setForm] = useState<AdminVehicle>(vehicle ? { ...vehicle } : createEmptyVehicle());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -289,7 +296,12 @@ export function VehicleForm({ token, vehicle, onSaved, fallback = false }: Vehic
             onUploaded={(urls) =>
               setForm((prev) => ({ ...prev, images: [...prev.images, ...urls] }))
             }
-            disabled={fallback}
+            disabled={fallback || !storageEnabled}
+            disabledMessage={
+              fallback
+                ? "Modo demo: conecta DATABASE_URL para habilitar ediciones."
+                : "Configurá Supabase para habilitar la carga de imágenes."
+            }
           />
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {form.images.map((image) => (
