@@ -1,9 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
-import Image from "next/image";
 import type { Metadata } from "next";
 
 import { config } from "@/lib/config";
-import { MG_LOGO_BASE64 } from "@/lib/logo-data";
 import "@/styles/globals.css";
 
 function hexToRgbComponents(hex: string): string | null {
@@ -94,23 +92,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 className="flex items-center gap-3 text-lg font-semibold text-slate-900"
                 aria-label="MG Automotores"
               >
-                <span className="flex items-center gap-3">
-                  <span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white text-primary shadow-sm sm:h-14 sm:w-14">
-                    <Image
-                      src={MG_LOGO_BASE64}
-                      alt="MG Automotores"
-                      width={224}
-                      height={224}
-                      className="h-full w-full object-contain"
-                      priority
-                    />
-                    <span className="sr-only">MG</span>
-                  </span>
-                  <span className="flex flex-col leading-tight">
-                    <span className="text-base font-semibold text-slate-900 sm:text-lg">MG Automotores</span>
-                    <span className="text-xs font-medium uppercase tracking-[0.35em] text-slate-400 sm:text-[0.7rem]">
-                      Vehículos seleccionados
-                    </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="text-base font-semibold text-slate-900 sm:text-lg">MG Automotores</span>
+                  <span className="text-xs font-medium uppercase tracking-[0.35em] text-slate-400 sm:text-[0.7rem]">
+                    Vehículos seleccionados
                   </span>
                 </span>
               </a>
